@@ -7,4 +7,4 @@ cat2="wordvectors/arxiv/arXiv_category_physics.class-ph.vec"
 python3 arxiv.py $cat1 $cat2
 
 # Produce table of results
-python3 arxiv_table.py "results/arxiv/cs.AI-physics.class-ph.csv" > "results/arxiv/table.txt"
+python3 arxiv_table.py "results/arxiv/cs.AI-physics.class-ph.csv" > "results/arxiv/table.md"
