@@ -1,41 +1,41 @@
 
 |Method|Language|Mean acc.|Max acc.|
 |------|--------|---------|--------|
-| s4|english|0.62|0.7|
-| noise-aware|english|0.61|0.65|
-| top-10|english|0.59|0.68|
-| bot-10|english|0.58|0.68|
+| s4|english|0.58|0.65|
+| noise-aware|english|0.6|0.65|
+| top-10|english|0.61|0.68|
+| bot-10|english|0.6|0.68|
 | global|english|0.61|0.68|
-| top-5|english|0.59|0.65|
-| bot-5|english|0.57|0.68|
+| top-5|english|0.6|0.65|
+| bot-5|english|0.58|0.65|
 
 |Method|Language|Mean acc.|Max acc.|
 |------|--------|---------|--------|
-| s4|german|0.65|0.77|
-| noise-aware|german|0.66|0.79|
-| top-10|german|0.64|0.75|
-| bot-10|german|0.63|0.75|
+| s4|german|0.65|0.75|
+| noise-aware|german|0.65|0.79|
+| top-10|german|0.64|0.77|
+| bot-10|german|0.63|0.71|
 | global|german|0.65|0.79|
-| top-5|german|0.66|0.77|
-| bot-5|german|0.64|0.73|
+| top-5|german|0.65|0.79|
+| bot-5|german|0.62|0.71|
 
 |Method|Language|Mean acc.|Max acc.|
 |------|--------|---------|--------|
-| s4|latin|0.57|0.7|
-| noise-aware|latin|0.52|0.62|
-| top-10|latin|0.52|0.68|
-| bot-10|latin|0.57|0.7|
+| s4|latin|0.49|0.7|
+| noise-aware|latin|0.5|0.6|
+| top-10|latin|0.51|0.65|
+| bot-10|latin|0.54|0.62|
 | global|latin|0.51|0.65|
-| top-5|latin|0.52|0.68|
-| bot-5|latin|0.58|0.72|
+| top-5|latin|0.53|0.7|
+| bot-5|latin|0.53|0.6|
 
 |Method|Language|Mean acc.|Max acc.|
 |------|--------|---------|--------|
-| s4|swedish|0.67|0.77|
-| noise-aware|swedish|0.65|0.74|
-| top-10|swedish|0.66|0.74|
-| bot-10|swedish|0.62|0.77|
+| s4|swedish|0.63|0.74|
+| noise-aware|swedish|0.65|0.77|
+| top-10|swedish|0.65|0.77|
+| bot-10|swedish|0.61|0.77|
 | global|swedish|0.65|0.74|
-| top-5|swedish|0.66|0.77|
-| bot-5|swedish|0.61|0.77|
+| top-5|swedish|0.65|0.77|
+| bot-5|swedish|0.59|0.77|
 
