@@ -11,9 +11,9 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, \
                             roc_auc_score, f1_score
 
 
-def predict(x, y, method="cosine"):
+def predict(x, y, method="cosine", t=0.5):
     if method == "cosine":
-        return cosine (x, y) < 0.5
+        return cosine (x, y) < t
 
 
 def sample_dissimilar(n):
@@ -24,7 +24,7 @@ def sample_dissimilar(n):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("alignment", choices=['top-5', 'top-10', 'noise-aware', 'bot-5', 'bot-10', 'global'],
+    parser.add_argument("alignment", choices=['top-5', 'top-10', 'noise-aware', 'bot-5', 'bot-10', 'global', 's4'],
                         default="top",
                         help="Method to use in the alignment of UK to US")
     parser.add_argument("--rounds", type=int, default=1,
@@ -71,6 +71,17 @@ def main():
         landmarks = wv_us.words
         a_, b_, Q = align(wv_uk, wv_us, anchor_words=landmarks)
         landmarks = landmarks[:len(landmarks)//2]
+    elif m == "s4":
+        landmarks = wv_us.words
+        a_, b_, Q = align(wv_uk, wv_us, anchor_words=landmarks)
+        landmarks, non_landmarks, Q = s4(wv_uk, wv_us,
+                                            cls_model="nn",
+                                            verbose=0,
+                                            iters=100,
+                                            n_targets=100,
+                                            n_negatives=10,
+                                            rate=0.25,
+                                        )
 
         a_, b_, Q = align(wv_uk, wv_us, anchor_words=landmarks)
     elif m == "top-10":
@@ -94,6 +105,9 @@ def main():
     cos_scores = list()
     na_scores = list()
     iters=100
+
+    # Interval to vary cosine thresholds
+    cos_thresholds = [0.3, 0.5, 0.7]
 
     # Run several rounds, if given
     for r in range(args.rounds):
@@ -131,7 +145,6 @@ def main():
             pass
         y_hat = model.predict(x)
         y_pred = (y_hat > 0.5)
-        y_pred_cos = (x_cos > 0.5)
 
         self_acc = accuracy_score(y_true, y_pred)
         self_prec = precision_score(y_true, y_pred)
@@ -140,11 +153,16 @@ def main():
         self_scores.append([self_acc, self_prec, self_rec, self_f1])
 
         # Cosine metrics
-        cos_acc = round(accuracy_score(y_true, y_pred_cos), 2)
-        cos_prec = round(precision_score(y_true, y_pred_cos), 2)
-        cos_rec = round(recall_score(y_true, y_pred_cos), 2)
-        cos_f1 = round(f1_score(y_true, y_pred_cos), 2)
-        cos_scores.append([cos_acc, cos_prec, cos_rec, cos_f1])
+        # Compute average over multiple runs
+        cos_acc = cos_prec = cos_rec = cos_f1 = 0
+        for t in cos_thresholds:
+            y_pred_cos = (x_cos > t)
+            cos_acc = round(accuracy_score(y_true, y_pred_cos), 2)
+            cos_prec = round(precision_score(y_true, y_pred_cos), 2)
+            cos_rec = round(recall_score(y_true, y_pred_cos), 2)
+            cos_f1 = round(f1_score(y_true, y_pred_cos), 2)
+
+            cos_scores.append([cos_acc, cos_prec, cos_rec, cos_f1])
 
         # Noise-Aware metrics
         na_acc = round(accuracy_score(y_true, y_pred_na), 2)
@@ -159,10 +177,15 @@ def main():
 
 
     # Print Markdown Table
-    print("|COS", m, *cos_scores[0], sep="|", end="|\n")
+    for j, t in enumerate(cos_thresholds):
+        print("|COS %.2f" % t, m, sep="|", end="|")
+        for i in range(4):
+            print("%.2f" % (round(cos_scores[j:, i].mean(), 2)), end="|", sep=" ")
+        print("|")
+    print("|")
     print("|S4-D", m, end="|", sep="|")
     for i in range(4):
-        print("%.2f +- %.2f" %(round(self_scores[:, 0].mean(), 2), round(self_scores[:, i].std(), 2)), end="|", sep=" ")
+        print("%.2f +- %.2f" %(round(self_scores[:, i].mean(), 2), round(self_scores[:, i].std(), 2)), end="|", sep=" ")
     print("|")
     print("|Noisy-Pairs", "-", *na_scores[0], sep="|", end="|\n")
 

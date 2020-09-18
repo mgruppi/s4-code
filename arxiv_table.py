@@ -113,7 +113,7 @@ def main():
     plt.savefig("results/arxiv/arxiv_ranking.pdf", format="pdf")
 
     N = 50  # top shifted
-    K = 20  # top common
+    K = 50  # top common
     set_global = set(sort_global[:N])
     set_noise = set(sort_noise[:N])
     set_self = set(sort_self[:N])

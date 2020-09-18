@@ -6,7 +6,7 @@ Run tests on SemEval2020 Task 1 data on the subtasks of:
 import numpy as np
 from WordVectors import WordVectors, intersection
 from alignment import align
-from s4 import s4
+from s4 import s4, threshold_crossvalidation
 from noise_aware import noise_aware
 
 from scipy.spatial.distance import cosine, euclidean
@@ -73,7 +73,7 @@ def main():
     parser.add_argument("--languages", nargs="+",
                         help="Languages to use",
                         default=["english", "german", "latin", "swedish"])
-    parser.add_argument("--cls", choices=["cosine"], default="cosine",
+    parser.add_argument("--cls", choices=["cosine", "s4", "cosine-auto"], default="cosine",
                         help="Classifier to use")
 
     args = parser.parse_args()
@@ -111,9 +111,10 @@ def main():
     cls_params = \
     {
         "english": {
-            "n_targets": 50,
-            "n_negatives": 100,
-            "iters": 200
+            "n_targets": 100,
+            "n_negatives": 50,
+            "rate": 1,
+            "iters": 500
         },
         "german":{
             "n_targets": 50,
@@ -128,6 +129,36 @@ def main():
         {
             "n_targets": 120,
             "n_negatives": 120
+        }
+    }
+
+    auto_params = \
+    {
+        "english":
+            {
+            "rate": 1.5,
+            "n_fold": 1,
+            "n_targets": 50,
+            "n_negatives": 100
+            },
+        "german":
+        {
+            "rate":1,
+            "n_fold": 1,
+            "n_targets": 200,
+            "n_negatives": 100
+        },
+        "latin":
+        {
+            "rate": 1,
+            "n_targets": 100,
+            "n_negatives": 15
+        },
+        "swedish":
+        {
+            "rate": 1,
+            "n_targets": 100,
+            "n_negatives": 200
         }
     }
 
@@ -221,6 +252,37 @@ def main():
                     accuracies[align_method][lang].append(round(accuracy, 2))
                     true_positives[align_method][lang].append(round(tp, 2))
                     false_negatives[align_method][lang].append(round(fn, 2))
+            elif classifier == "cosine-auto":
+                t_cos = threshold_crossvalidation(wv1_, wv2_, iters=1,
+                                                            **auto_params[lang],
+                                                            landmarks=landmarks)
+                x = np.array([cosine(wv1_[w], wv2_[w]) for w in wv1.words])
+                x = get_feature_cdf(x)
+                x = np.array([x[wv1.word_id[i.lower()]] for i in targets])
+                p = x.reshape(-1, 1)
+                r = vote(p)
+                y_pred = r
+                y_bin = y_pred > t_cos
+                correct = (y_bin == y_true)
+
+                accuracy = accuracy_score(y_true, y_bin)
+
+                accuracies[align_method][lang].append(round(accuracy, 2))
+
+            elif classifier == "s4":
+                model = s4(wv1_, wv2_, landmarks=landmarks,
+                                                    verbose=0,
+                                                    **cls_params[lang],
+                                                    update_landmarks=False)
+                # Concatenate vectors of target words for prediction
+                x = np.array([np.concatenate((wv1_[t.lower()], wv2_[t.lower()])) for t in targets])
+                y_pred = model.predict(x)
+                y_bin = y_pred > 0.5
+                correct = (y_bin == y_true)
+
+                accuracy = accuracy_score(y_true, y_bin)
+                print(accuracy)
+                accuracies[align_method][lang].append(round(accuracy, 2))
 
 
             c_method[align_method] = y_pred

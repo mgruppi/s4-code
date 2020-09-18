@@ -7,6 +7,7 @@ alignments=("global"
           "top-10"
           "bot-5"
           "bot-10"
+          "s4"
           )
 
 # Initializes results table
