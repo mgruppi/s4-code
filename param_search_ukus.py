@@ -178,14 +178,13 @@ def main():
         print("|COS %.2f" % t, m, sep="|", end="|")
         for i in range(4):
             print("%.2f" % (round(cos_scores[j:, i].mean(), 2)),
-                  args.r, end="|", sep=" ")
-        print("|")
-    print("|")
+                  end="|", sep=" ")
+        print(args.r)
     print("|S4-D", m, end="|", sep="|")
     for i in range(4):
         print("%.2f +- %.2f" %(round(self_scores[:, i].mean(), 2), round(self_scores[:, i].std(), 2)),
-              args.r, end="|", sep=" ")
-    print("|")
+              end="|", sep=" ")
+    print()
     print("|Noisy-Pairs", "-", *na_scores[0], args.r, sep="|", end="|\n")
 
 
