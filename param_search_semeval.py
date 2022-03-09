@@ -302,7 +302,6 @@ def main():
     # print("|Method|Language|Mean acc.|Max acc.|")
     # print("|------|--------|---------|--------|")
     for method in accuracies:
-        print("|", method, end="|", sep="")
         for lang in accuracies[method]:
             print(lang, round(np.mean(accuracies[method][lang]), 2),
                   np.max(accuracies[method][lang]), args.r, sep="|", end="|\n")
