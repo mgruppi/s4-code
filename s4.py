@@ -342,6 +342,10 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         landmark_set = set(landmarks)
         non_landmarks = np.array([w for w in wv1.words if w not in landmark_set])
     else:
+        if landmarks == None:  # If no landmarks are given, infer candidates for positive/negative sampling
+            landmark_dists = [euclidean(u, v) for u, v in zip(wv1.vectors, wv2.vectors)]
+            landmark_args = np.argsort(landmark_dists)
+            landmarks = [wv1.words[i] for i in landmark_args[:int(len(wv1.words)*0.5)]]
         landmark_set = set(landmarks)
         non_landmarks = [w for w in wv1.words if w not in landmark_set]
 
