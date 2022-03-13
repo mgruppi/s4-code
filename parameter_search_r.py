@@ -141,12 +141,12 @@ if __name__ == "__main__":
         wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
 
         results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
-                                          threshold=0.1
+                                          threshold=0.2
                                           )
         for res in results_semeval:
             print(lang, *res, sep=",", file=fout_cosine)
 
-        results_semeval_s4 = run_experiments(wv1, wv2, targets, y_true, cls=s4_cls)
+        results_semeval_s4 = run_experiments(wv1, wv2, targets, targets, y_true, cls=s4_cls)
         for res in results_semeval_s4:
             print(lang, *res, sep=",", file=fout_s4)
 
