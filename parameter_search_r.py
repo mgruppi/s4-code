@@ -13,7 +13,7 @@ from alignment import align
 
 
 def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
-    x = np.array([cosine(wv1[t1], wv2[t2]) for t1, t2 in zip(targets_1, targets_2)])
+    x = np.array([cosine(wv1[t1.lower()], wv2[t2.lower()]) for t1, t2 in zip(targets_1, targets_2)])
     y_pred = x.reshape(-1, 1)
 
     y_bin = (y_pred > threshold)
