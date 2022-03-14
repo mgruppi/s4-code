@@ -42,7 +42,7 @@ def s4_cls(wv1, wv2, targets_1, targets_2, y_true, **kwargs):
 
 
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upper=2,
-                    cls=cosine_cls, n_steps=21,
+                    cls=cosine_cls, n_steps=11,
                     **kwargs):
     """
     Performs experiments by varying R in a range for a given input
