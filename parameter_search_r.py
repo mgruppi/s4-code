@@ -10,6 +10,7 @@ from s4 import s4, threshold_crossvalidation
 from scipy.spatial.distance import cosine
 from param_search_semeval import get_feature_cdf, vote
 from alignment import align
+import argparse
 
 
 def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
@@ -129,44 +130,60 @@ def read_ukus_data(normalized=False):
 
 if __name__ == "__main__":
 
-    normalized = False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-semeval", dest="no_semeval", action="store_true",
+                        help="Do not perform SemEval 2020 experiment")
+    parser.add_argument("--no-ukus", dest="no_ukus", action="store_true",
+                        help="Do not perform UKUS experiment")
+    parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
+                        help="Number of trials per r value")
+    parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
+
+    args = parser.parse_args()
+
+    normalized = args.normalized
     languages = ["english", "german", "latin", "swedish"]
 
-    fout_cosine = open("param_search_results_semeval_cosine.txt", "w")
-    fout_s4 = open("param_search_results_semeval_s4.txt", "w")
+    if not args.no_semeval:
+        fout_cosine = open("param_search_results_semeval_cosine.txt", "w")
+        fout_s4 = open("param_search_results_semeval_s4.txt", "w")
 
-    fout_cosine.write("language,r,accuracy,precision,recall,f1\n")
-    fout_s4.write("language,r,accuracy,precision,recall,f1\n")
-    for lang in languages:
-        wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
+        fout_cosine.write("language,r,accuracy,precision,recall,f1\n")
+        fout_s4.write("language,r,accuracy,precision,recall,f1\n")
+        for lang in languages:
+            wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
 
-        results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
-                                          threshold=0.2
-                                          )
-        for res in results_semeval:
-            print(lang, *res, sep=",", file=fout_cosine)
+            results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
+                                              threshold=0.2,
+                                              num_trials=args.num_trials
+                                              )
+            for res in results_semeval:
+                print(lang, *res, sep=",", file=fout_cosine)
 
-        results_semeval_s4 = run_experiments(wv1, wv2, targets, targets, y_true, cls=s4_cls)
-        for res in results_semeval_s4:
-            print(lang, *res, sep=",", file=fout_s4)
+            results_semeval_s4 = run_experiments(wv1, wv2, targets, targets, y_true, cls=s4_cls,
+                                                 num_trials=args.num_trials)
+            for res in results_semeval_s4:
+                print(lang, *res, sep=",", file=fout_s4)
 
-    fout_cosine.close()
-    fout_s4.close()
+        fout_cosine.close()
+        fout_s4.close()
 
-    result_files = ["param_search_results_ukus_cosine_03.txt", "param_search_results_ukus_cosine_05.txt",
-                    "param_search_results_ukus_s4d.txt"]
-    ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
-                   {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
+    if not args.no_ukus:
+        result_files = ["param_search_results_ukus_cosine_03.txt", "param_search_results_ukus_cosine_05.txt",
+                        "param_search_results_ukus_s4d.txt"]
+        ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
+                       {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
 
-    wv1, wv2, targets, y_true = read_ukus_data(normalized)
-    targets_1, targets_2 = zip(*targets)
-    for f, params in zip(result_files, ukus_params):
-        fout = open(f, "w")
-        results_ukus = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
-                                       **params)
+        wv1, wv2, targets, y_true = read_ukus_data(normalized)
+        targets_1, targets_2 = zip(*targets)
+        for f, params in zip(result_files, ukus_params):
+            fout = open(f, "w")
+            results_ukus = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
+                                           num_trials=args.num_trials,
+                                           **params)
 
-        for res in results_ukus:
-            print("ukus", *res, sep=",", file=fout)
+            for res in results_ukus:
+                print("ukus", *res, sep=",", file=fout)
 
-        fout.close()
+            fout.close()
 
