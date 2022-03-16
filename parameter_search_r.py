@@ -44,6 +44,7 @@ def s4_cls(wv1, wv2, targets_1, targets_2, y_true, **kwargs):
 
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upper=2,
                     cls=cosine_cls, n_steps=11,
+                    align="s4a",
                     **kwargs):
     """
     Performs experiments by varying R in a range for a given input
@@ -57,6 +58,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
         r_upper: (int) Upper bound for parameter `r`
         cls: (callable) Classifier to apply. Must receive wv1, wv2, targets and y_true as parameters
         n_steps: (int) Number of steps in which to increase `r`
+        align: (str) Alignment strategy to apply in {'s4a', 'global'}
 
     Returns:
         results: List of tuples with the results (r, accuracy, precision, recall, f1)
@@ -69,11 +71,13 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
 
     for r_ in r_range:
         for i in range(num_trials):
-
-            landmarks, non_landmarks, Q, = s4(wv1, wv2,
-                                              verbose=0,
-                                              rate=r_,
-                                              )
+            if align == "global":
+                landmarks = wv1.words
+            elif align == "s4a":
+                landmarks, non_landmarks, Q, = s4(wv1, wv2,
+                                                  verbose=0,
+                                                  rate=r_,
+                                                  )
             wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
             acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
             res_tuple = (r_, acc, prec, rec, f1)
@@ -145,45 +149,45 @@ if __name__ == "__main__":
     languages = ["english", "german", "latin", "swedish"]
 
     if not args.no_semeval:
-        fout_cosine = open("param_search_results_semeval_cosine.txt", "w")
-        fout_s4 = open("param_search_results_semeval_s4.txt", "w")
+        semeval_params = [{"threshold": 0.01, "cls":cosine_cls}, {"threshold": 0.05, "cls": cosine_cls},
+                          {"threshold": 0.1, "cls": cosine_cls}, {"threshold": 0.25, "cls": cosine_cls},
+                          {"threshold": 0.5, "cls": cosine_cls}, {"threshold": 0.75, "cls": cosine_cls},
+                          {"threshold": 0.9, "cls": cosine_cls}]
+        cls_names = ["cosine_001", "cosine_005", "cosine_010", "cosine_025", "cosine_050", "cosine_075", "cosine_090"]
 
-        fout_cosine.write("language,r,accuracy,precision,recall,f1\n")
-        fout_s4.write("language,r,accuracy,precision,recall,f1\n")
+        fout = open("param_search_results_semeval.txt", "w")
+        fout.write("language,cls_name,r,accuracy,precision,recall,f1\n")
+
         for lang in languages:
             wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
 
-            results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
-                                              threshold=0.2,
-                                              num_trials=args.num_trials
-                                              )
-            for res in results_semeval:
-                print(lang, *res, sep=",", file=fout_cosine)
+            for name, params in zip(cls_names, params):
+                results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
+                                                  num_trials=args.num_trials,
+                                                  **params
+                                                  )
+                for res in results_semeval:
+                    print(lang,name, *res, sep=",", file=fout)
 
-            results_semeval_s4 = run_experiments(wv1, wv2, targets, targets, y_true, cls=s4_cls,
-                                                 num_trials=args.num_trials)
-            for res in results_semeval_s4:
-                print(lang, *res, sep=",", file=fout_s4)
-
-        fout_cosine.close()
-        fout_s4.close()
+        fout.close()
 
     if not args.no_ukus:
-        result_files = ["param_search_results_ukus_cosine_03.txt", "param_search_results_ukus_cosine_05.txt",
-                        "param_search_results_ukus_s4d.txt"]
+        cls_names = ["cosine_03", "cosine_05", "cosine_07", "s4d"]
         ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
                        {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
 
+        fout = open("param_search_results_ukus.txt", "w")
+        fout.write("cls_name,r,accuracy,precision,recall,f1")
         wv1, wv2, targets, y_true = read_ukus_data(normalized)
         targets_1, targets_2 = zip(*targets)
-        for f, params in zip(result_files, ukus_params):
-            fout = open(f, "w")
+        for name, params in zip(cls_names, ukus_params):
             results_ukus = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                            num_trials=args.num_trials,
+                                           align="global",
                                            **params)
 
             for res in results_ukus:
-                print("ukus", *res, sep=",", file=fout)
+                print(name, *res, sep=",", file=fout)
 
-            fout.close()
+        fout.close()
 
