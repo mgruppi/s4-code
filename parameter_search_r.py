@@ -44,7 +44,7 @@ def s4_cls(wv1, wv2, targets_1, targets_2, y_true, **kwargs):
 
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upper=2,
                     cls=cosine_cls, n_steps=11,
-                    align="s4a",
+                    align_method="s4a",
                     **kwargs):
     """
     Performs experiments by varying R in a range for a given input
@@ -58,7 +58,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
         r_upper: (int) Upper bound for parameter `r`
         cls: (callable) Classifier to apply. Must receive wv1, wv2, targets and y_true as parameters
         n_steps: (int) Number of steps in which to increase `r`
-        align: (str) Alignment strategy to apply in {'s4a', 'global'}
+        align_method: (str) Alignment strategy to apply in {'s4a', 'global'}
 
     Returns:
         results: List of tuples with the results (r, accuracy, precision, recall, f1)
@@ -71,9 +71,9 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
 
     for r_ in r_range:
         for i in range(num_trials):
-            if align == "global":
+            if align_method == "global":
                 landmarks = wv1.words
-            elif align == "s4a":
+            elif align_method == "s4a":
                 landmarks, non_landmarks, Q, = s4(wv1, wv2,
                                                   verbose=0,
                                                   rate=r_,
@@ -183,7 +183,7 @@ if __name__ == "__main__":
         for name, params in zip(cls_names, ukus_params):
             results_ukus = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                            num_trials=args.num_trials,
-                                           align="global",
+                                           align_method="global",
                                            **params)
 
             for res in results_ukus:
