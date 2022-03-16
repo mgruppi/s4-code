@@ -161,7 +161,7 @@ if __name__ == "__main__":
         for lang in languages:
             wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
 
-            for name, params in zip(cls_names, params):
+            for name, params in zip(cls_names, semeval_params):
                 results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
                                                   num_trials=args.num_trials,
                                                   **params
