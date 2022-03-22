@@ -1,9 +1,15 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import os
+
 
 f_se = "param_search_results_semeval.txt"
 f_en = "param_search_results_ukus.txt"
+
+path_out = "results/r_search/"
+if not os.path.exists(path_out):
+    os.makedirs(path_out)
 
 df_se = pd.read_csv(f_se)
 
@@ -12,13 +18,21 @@ lang = "english"
 cls = "cosine_010"
 metric = "accuracy"
 
-languages = ["english"]
+languages = ["english", "german", "latin", "swedish"]
+metrics = ["accuracy", "precision", "recall", "f1"]
+
 for lang in languages:
     df = df_se[df_se["language"] == lang]
-    sns.relplot(data=df, x="r", y="accuracy", kind="line", hue="cls_name")
-    plt.legend()
-    plt.show()
 
+    for m in metrics:
+        sns.relplot(data=df, x="r", y=m, kind="line", hue="cls_name")
+        plt.savefig(os.path.join(path_out, "semeval_%s_%s.png" % (lang, m)))
+
+
+df_en = pd.read_csv(f_en)
+for m in metrics:
+    sns.relplot(data=df_en, x="r", y=m, kind="line", hue="cls_name")
+    plt.savefig(os.path.join(path_out, "ukus_%s.png" % m))
 
 # files = ["param_search_results_semeval_cosine.txt", "param_search_results_semeval_s4.txt"]
 #
