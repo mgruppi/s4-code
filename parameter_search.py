@@ -204,11 +204,10 @@ if __name__ == "__main__":
 
     if args.param == "r":
         if not args.no_semeval:
-            semeval_params = [{"threshold": 0.01, "cls": cosine_cls}, {"threshold": 0.05, "cls": cosine_cls},
-                              {"threshold": 0.1, "cls": cosine_cls}, {"threshold": 0.25, "cls": cosine_cls},
+            semeval_params = [{"threshold": 0.01, "cls": cosine_cls}, {"threshold": 0.25, "cls": cosine_cls},
                               {"threshold": 0.5, "cls": cosine_cls}, {"threshold": 0.75, "cls": cosine_cls},
                               {"threshold": 0.9, "cls": cosine_cls}]
-            cls_names = ["cosine_001", "cosine_005", "cosine_010", "cosine_025", "cosine_050", "cosine_075",
+            cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
                          "cosine_090"]
 
             fout = open("param_search_results_semeval.txt", "w")
@@ -250,10 +249,10 @@ if __name__ == "__main__":
         r_value = 1.0
         if not args.no_semeval:
             semeval_params = [{"threshold": 0.01, "cls": cosine_cls},
-                              {"threshold": 0.1, "cls": cosine_cls}, {"threshold": 0.25, "cls": cosine_cls},
+                              {"threshold": 0.25, "cls": cosine_cls},
                               {"threshold": 0.5, "cls": cosine_cls}, {"threshold": 0.75, "cls": cosine_cls},
                               {"threshold": 0.9, "cls": cosine_cls}]
-            cls_names = ["cosine_001", "cosine_010", "cosine_025", "cosine_050", "cosine_075",
+            cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
                          "cosine_090"]
             fout = open("param_search_n_results_semeval.txt", "w")
             fout.write("language,cls_name,r,n_pos,n_neg,accuracy,precision,recall,f1\n")
