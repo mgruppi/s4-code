@@ -207,7 +207,6 @@ if __name__ == "__main__":
     parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
-    parser.add_argument("--iters", type=int, default=100, help="No. of s4 iterations (epochs)")
 
     args = parser.parse_args()
 
