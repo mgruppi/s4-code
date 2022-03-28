@@ -85,7 +85,7 @@ class WordVectors:
             self.words = list()
             for i, w in enumerate(words):
                 self.word_id[w] = i
-            self.words = list(words)
+            self.words = np.array(words)
             self.vectors = np.array(vectors)
             self.counts = counts
             self.dimension = len(vectors[0])
@@ -166,7 +166,7 @@ class WordVectors:
                 words_kept.append(word)
                 vectors_kept.append(vec)
 
-        self.words = words_kept
+        self.words = np.array(words_kept)
         self.vectors = np.array(vectors_kept)
         self.word_id = OrderedDict()
         for i, w in enumerate(self.words):
@@ -191,7 +191,7 @@ class WordVectors:
 
             data = map(process_line, fin.readlines())
             self.words, self.vectors = zip(*data)
-            self.words = list(self.words)
+            self.words = np.array(self.words)
             self.word_id = {w: i for i, w in enumerate(self.words)}
             self.vectors = np.array(self.vectors, dtype=float)
 

@@ -70,4 +70,28 @@ class S4Network(nn.Module):
 
 
 if __name__ == "__main__":
-    pass
+    wv_source = "../data/embeddings/hist-english/c1.vec"
+    wv_target = "../data/embeddings/hist-english/c2.vec"
+    normalized = False
+
+    dim = 600
+    n = 1000
+
+    x = np.random.normal(size=(n, dim))
+    y = np.random.randint(0, 2, size=n)
+
+    wv1 = WordVectors(input_file=wv_source, normalized=normalized)
+    wv2 = WordVectors(input_file=wv_target, normalized=normalized)
+
+    wv1, wv2 = intersection(wv1, wv2)
+
+    model = S4Network(wv1.dimension*2)
+
+    l, m, q = s4(wv1, wv2,
+                 cls_model="nn",
+                 n_targets=100,
+                 n_negatives=100,
+                 rate=1,
+                 iters=100,
+                 verbose=1,
+                 update_landmarks=True)

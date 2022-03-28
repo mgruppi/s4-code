@@ -10,7 +10,7 @@ We can begin by aligning on all words, and then learn better landmarks from
 there. Alternatively, one can start from random landmarks."""
 
 
-# Third party modules
+# STL/Third party modules
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -19,6 +19,7 @@ from sklearn.metrics import accuracy_score, log_loss
 from scipy.spatial.distance import cosine, euclidean
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 
 # Local modules
 from WordVectors import WordVectors, intersection
@@ -38,6 +39,7 @@ def negative_samples(words, size, p=None):
     neg_samples = np.random.choice(words, size, p=p)
 
     return neg_samples
+
 
 def inject_change_single(wv, w, words, v_a, alpha, replace=False,
                          max_tries=50):
@@ -316,22 +318,30 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
     """
 
     # Define verbose prints
-    if verbose==1:
+    if verbose == 1:
         def verbose_print(*s, end="\n"):
             print(*s, end=end)
-    elif verbose==0:
-        def verbose_print(*s, end="\n"):
+    elif verbose == 0:
+        def verbose_print(*args):
             return None
 
-    wv2_original = WordVectors(words=wv2.words, vectors=wv2.vectors.copy())
+    # Measure times
+    t_sampling = 0
+    t_train = 0
+    t_update = 0
+    t_predict = 0
+    t_realign = 0
+    t_begin = time.time()
+    t0 = time.time()
 
+    wv2_original = WordVectors(words=wv2.words, vectors=wv2.vectors.copy())
 
     avg_window = 0  # number of iterations to use in running average
 
     # Begin alignment
     if update_landmarks:
         # Check if landmarks is initialized
-        if landmarks == None:
+        if landmarks is None:
             wv1, wv2, Q = align(wv1, wv2)  # start form global alignment
             landmark_dists = [euclidean(u, v) for u, v in zip(wv1.vectors, wv2.vectors)]
             landmark_args = np.argsort(landmark_dists)
@@ -340,7 +350,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         landmark_set = set(landmarks)
         non_landmarks = np.array([w for w in wv1.words if w not in landmark_set])
     else:
-        if landmarks == None:  # If no landmarks are given, infer candidates for positive/negative sampling
+        if landmarks is None:  # If no landmarks are given, infer candidates for positive/negative sampling
             landmark_dists = [euclidean(u, v) for u, v in zip(wv1.vectors, wv2.vectors)]
             landmark_args = np.argsort(landmark_dists)
             landmarks = [wv1.words[i] for i in landmark_args[:int(len(wv1.words)*0.5)]]
@@ -375,9 +385,10 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
     cumulative_cos_out = list()
 
     prev_landmarks = set(landmarks)
+    t_init = time.time() - t0
     for iter in range(iters):
 
-        replace = dict()  # replacement dictionary
+        t0 = time.time()
         pos_samples = list()
         pos_vectors = dict()
 
@@ -409,6 +420,9 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         # Create dictionary of supervision samples (positive and negative)
         # Mapping word -> vector
         sup_vectors = {**neg_vectors, **pos_vectors}
+
+        t_sampling += time.time() - t0
+        t0 = time.time()
 
         # Prepare training data
         words_train = np.concatenate((pos_samples, neg_samples))
@@ -477,11 +491,13 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
             acc_t = accuracy_score(y_train, y_hat_t)
             history = [training_loss, acc_t]
 
+        t_train += time.time() - t0
+        t0 = time.time()
+
         loss_hist.append(history[0])
 
         # Apply model on original data to select landmarks
-        x_real = np.array([np.append(u, v) for u, v
-                           in zip(wv1.vectors, wv2_original.vectors)])
+        x_real = np.concatenate((wv1.vectors, wv2_original.vectors), axis=1)
         if cls_model == "nn":
             predict_real = model.predict(x_real)
         elif cls_model == "svm_auto":
@@ -494,9 +510,14 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         else:
             predict_real = model.predict(x_real)
 
+        t_predict += time.time() - t0
+        t0 = time.time()
+
         if update_landmarks:
-            landmarks = [wv1.words[i] for i in range(len(wv1.words)) if predict_real[i]<t]
-            non_landmarks = [wv1.words[i] for i in range(len(wv1.words)) if predict_real[i]>t]
+            predict_real = predict_real.flatten()
+            mask = predict_real < t
+            landmarks = wv1.words[mask]
+            non_landmarks = wv1.words[~mask]
 
         # Update landmark overlap using Jaccard Index
         isect_ab = set.intersection(prev_landmarks, set(landmarks))
@@ -512,10 +533,13 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
                       (iter, len(landmarks), cumulative_alignment_hist[-1],
                        cumulative_out_hist[-1], history[0], cumulative_overlap_hist[-1], history[1]),
                       end="\r")
+        t_update += time.time() - t0
+        t0 = time.time()
 
         wv1, wv2_original, Q = align(wv1, wv2_original, anchor_words=landmarks)
+        t_realign += time.time() - t0
 
-        # Check if overlap difference is below threhsold
+        # Check if overlap difference is below threshold
         if np.mean(overlap_hist) > t_overlap:
             break
 
@@ -557,6 +581,18 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         # plt.legend()
         plt.tight_layout()
         plt.savefig("overlap.pdf", format="pdf")
+
+    t_total = time.time() - t_begin
+    if verbose == 1:
+        print("--- RUNNING TIME ---")
+        print("init: %.3f seconds" % t_init)
+        print("sampling: %.3f seconds" % t_sampling)
+        print("training: %.3f seconds" % t_train)
+        print("predict: %.3f seconds" % t_predict)
+        print("update: %.3f seconds" % t_update)
+        print("realign: %.3f seconds" % t_update)
+        print("---"*30)
+        print("total: %.3f seconds" % t_total)
 
     if update_landmarks:
         if not return_model:
