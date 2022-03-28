@@ -88,10 +88,10 @@ if __name__ == "__main__":
     model = S4Network(wv1.dimension*2)
 
     l, m, q = s4(wv1, wv2,
-                 cls_model="nn",
+                 cls_model=model,
                  n_targets=100,
                  n_negatives=100,
                  rate=1,
-                 iters=100,
+                 iters=500,
                  verbose=1,
                  update_landmarks=True)
