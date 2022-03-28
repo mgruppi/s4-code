@@ -82,7 +82,8 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
                 landmarks, non_landmarks, Q, = s4(wv1, wv2,
                                                   verbose=0,
                                                   rate=r_,
-                                                  cls_model=cls_model
+                                                  cls_model=cls_model,
+                                                  iters=20
                                                   )
             wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
             acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
@@ -138,7 +139,8 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                                                       rate=r,
                                                       n_targets=n_pos,
                                                       n_negatives=n_neg,
-                                                      cls_model=cls_model
+                                                      cls_model=cls_model,
+                                                      iters=20,
                                                       )
                 wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
                 acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
@@ -205,6 +207,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
+    parser.add_argument("--iters", type=int, default=100, help="No. of s4 iterations (epochs)")
 
     args = parser.parse_args()
 
