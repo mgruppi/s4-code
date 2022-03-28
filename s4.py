@@ -322,7 +322,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         def verbose_print(*s, end="\n"):
             print(*s, end=end)
     elif verbose == 0:
-        def verbose_print(*args):
+        def verbose_print(*s, end="\n"):
             return None
 
     # Measure times

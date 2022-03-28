@@ -7,6 +7,7 @@ from WordVectors import WordVectors, intersection
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from s4 import s4, threshold_crossvalidation
+from s4_torch import S4Network
 from scipy.spatial.distance import cosine
 from param_search_semeval import get_feature_cdf, vote
 from alignment import align
@@ -27,8 +28,10 @@ def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
 
 
 def s4_cls(wv1, wv2, targets_1, targets_2, y_true, **kwargs):
+    cls_model = S4Network(wv1.dimension*2)
     model = s4(wv1, wv2, update_landmarks=False,
                verbose=0,
+               cls_model=cls_model,
                **kwargs)
     x = np.array([np.concatenate((wv1[t1.lower()], wv2[t2.lower()])) for t1, t2 in zip(targets_1, targets_2)])
     y_pred = model.predict(x)
@@ -69,6 +72,8 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
 
     results = list()
 
+    cls_model = S4Network(wv1.dimension*2)
+
     for r_ in r_range:
         for i in range(num_trials):
             if align_method == "global":
@@ -77,6 +82,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
                 landmarks, non_landmarks, Q, = s4(wv1, wv2,
                                                   verbose=0,
                                                   rate=r_,
+                                                  cls_model=cls_model
                                                   )
             wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
             acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
@@ -89,7 +95,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
 def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10,
                            cls=cosine_cls,
                            r=1,
-                           n_steps=200,
+                           n_steps=750,
                            n_pos_upper=1000,
                            n_neg_upper=1000,
                            align_method="s4a",
@@ -114,10 +120,12 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
         result_tuple: Yields tuples with the results (r, n_pos, n_neg, accuracy, precision, recall, f1)
     """
     np.random.seed(1)
-    n_pos_range = np.arange(100, n_pos_upper+n_steps, n_steps)
+    n_pos_range = np.arange(100, n_pos_upper+100, n_steps)
     print("N_pos range", n_pos_range)
-    n_neg_range = np.arange(100, n_neg_upper+n_steps, n_steps)
+    n_neg_range = np.arange(100, n_neg_upper+100, n_steps)
     print("N_neg range", n_neg_range)
+
+    cls_model = S4Network(wv1.dimension*2)
 
     for n_pos in n_pos_range:
         for n_neg in n_neg_range:
@@ -129,7 +137,8 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                                                       verbose=0,
                                                       rate=r,
                                                       n_targets=n_pos,
-                                                      n_negatives=n_neg
+                                                      n_negatives=n_neg,
+                                                      cls_model=cls_model
                                                       )
                 wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
                 acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
@@ -250,7 +259,8 @@ if __name__ == "__main__":
         if not args.no_semeval:
             semeval_params = [{"threshold": 0.01, "cls": cosine_cls},
                               {"threshold": 0.25, "cls": cosine_cls},
-                              {"threshold": 0.5, "cls": cosine_cls}, {"threshold": 0.75, "cls": cosine_cls},
+                              {"threshold": 0.5, "cls": cosine_cls},
+                              {"threshold": 0.75, "cls": cosine_cls},
                               {"threshold": 0.9, "cls": cosine_cls}]
             cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
                          "cosine_090"]

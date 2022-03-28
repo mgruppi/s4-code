@@ -70,8 +70,8 @@ class S4Network(nn.Module):
 
 
 if __name__ == "__main__":
-    wv_source = "../data/embeddings/hist-english/c1.vec"
-    wv_target = "../data/embeddings/hist-english/c2.vec"
+    wv_source = "wordvectors/semeval/english-corpus1.vec"
+    wv_target = "wordvectors/semeval/english-corpus2.vec"
     normalized = False
 
     dim = 600
@@ -92,6 +92,6 @@ if __name__ == "__main__":
                  n_targets=100,
                  n_negatives=100,
                  rate=1,
-                 iters=500,
+                 iters=20,
                  verbose=1,
                  update_landmarks=True)
