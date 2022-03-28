@@ -353,6 +353,8 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         model = build_keras_model(wv1.dimension*2)
     elif cls_model == "svm_auto" or cls_model == "svm_features":
         model = build_sklearn_model()  # get SVC
+    else:
+        model = cls_model  # callable cls_model
 
     landmark_hist = list()  # store no. of landmark history
     loss_hist = list()  # store self-supervision loss history
@@ -468,6 +470,12 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
             y_hat_t = (pred_train[:, 0] > 0.5)
             acc_t = accuracy_score(y_train, y_hat_t)
             history = [log_loss(y_train, pred_train), acc_t]
+        else:
+            training_loss = model.fit(x_train, y_train)
+            proba = model.predict(x_train)
+            y_hat_t = (proba[:, 0] > 0.5)
+            acc_t = accuracy_score(y_train, y_hat_t)
+            history = [training_loss, acc_t]
 
         loss_hist.append(history[0])
 
@@ -483,8 +491,8 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
             x_real_ = get_features(x_real)
             predict_real = model.predict_proba(x_real_)
             predict_real = predict_real[:, 1]
-
-        y_predict = (predict_real>t)
+        else:
+            predict_real = model.predict(x_real)
 
         if update_landmarks:
             landmarks = [wv1.words[i] for i in range(len(wv1.words)) if predict_real[i]<t]
