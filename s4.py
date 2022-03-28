@@ -14,7 +14,7 @@ there. Alternatively, one can start from random landmarks."""
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from sklearn.svm import SVC, LinearSVC
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, log_loss
 from scipy.spatial.distance import cosine, euclidean
 import matplotlib.pyplot as plt
@@ -28,6 +28,7 @@ from alignment import align
 # Initialize random seeds
 np.random.seed(1)
 tf.random.set_seed(1)
+
 
 def negative_samples(words, size, p=None):
     """
@@ -110,7 +111,7 @@ def inject_change_batch(wv, changes, alpha, replace=True):
     return wv_new
 
 
-def get_features(x, names=["cos"]):
+def get_features(x, names=("cos",)):
     """
     Compute features given input training data (concatenated vectors)
     Default features is cosine. Accepted features: cosine (cos).
@@ -269,21 +270,18 @@ def threshold_crossvalidation(wv1, wv2, iters=100,
     return best_t
 
 
-
-
-
 def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
-                              iters=100,
-                              n_targets=10,
-                              n_negatives=10,
-                              fast=True,
-                              rate=0,
-                              t=0.5,
-                              t_overlap=1,
-                              landmarks=None,
-                              update_landmarks=True,
-                              return_model=False,
-                              debug=False):
+          iters=100,
+          n_targets=10,
+          n_negatives=10,
+          fast=True,
+          rate=0,
+          t=0.5,
+          t_overlap=1,
+          landmarks=None,
+          update_landmarks=True,
+          return_model=False,
+          debug=False):
     """
     Performs self-supervised learning of semantic change.
     Generates negative samples by sampling from landmarks.
@@ -446,7 +444,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         alignment_all_hist.append(alignment_all_loss)
 
         if debug:
-        # cosine loss
+            # cosine loss
             cos_in = np.mean([cosine(u, v) for u, v in zip (v1_land, v2_land)])
             cos_out = np.mean([cosine(u, v) for u, v in zip(v1_out, v2_out)])
             cos_loss_in_hist.append(cos_in)
@@ -475,7 +473,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
         # Apply model on original data to select landmarks
         x_real = np.array([np.append(u, v) for u, v
-                            in zip(wv1.vectors, wv2_original.vectors)])
+                           in zip(wv1.vectors, wv2_original.vectors)])
         if cls_model == "nn":
             predict_real = model.predict(x_real)
         elif cls_model == "svm_auto":
@@ -498,25 +496,20 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         j_index = len(isect_ab)/len(union_ab)
         overlap_hist.append(j_index)
 
-
-
         cumulative_overlap_hist.append(np.mean(overlap_hist[-avg_window:]))  # store mean
 
         prev_landmarks = set(landmarks)
 
         verbose_print("> %3d | L %4d | l(in): %.2f | l(out): %.2f | loss: %.2f | overlap %.2f | acc: %.2f" %
-                        (iter, len(landmarks), cumulative_alignment_hist[-1],
-                         cumulative_out_hist[-1], history[0], cumulative_overlap_hist[-1], history[1]),
-                         end="\r")
+                      (iter, len(landmarks), cumulative_alignment_hist[-1],
+                       cumulative_out_hist[-1], history[0], cumulative_overlap_hist[-1], history[1]),
+                      end="\r")
 
         wv1, wv2_original, Q = align(wv1, wv2_original, anchor_words=landmarks)
-
 
         # Check if overlap difference is below threhsold
         if np.mean(overlap_hist) > t_overlap:
             break
-
-
 
     # Print new line
     verbose_print()
@@ -556,7 +549,6 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         # plt.legend()
         plt.tight_layout()
         plt.savefig("overlap.pdf", format="pdf")
-        #plt.show()
 
     if update_landmarks:
         if not return_model:
