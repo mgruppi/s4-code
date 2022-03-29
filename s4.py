@@ -536,6 +536,8 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         t_update += time.time() - t0
         t0 = time.time()
 
+        if len(landmarks) == 0:
+            break
         wv1, wv2_original, Q = align(wv1, wv2_original, anchor_words=landmarks)
         t_realign += time.time() - t0
 

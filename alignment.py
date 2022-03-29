@@ -2,6 +2,7 @@ from scipy.linalg import orthogonal_procrustes
 import numpy as np
 from WordVectors import WordVectors
 
+
 # Word alignment module
 def align(wv1, wv2, anchor_indices=None, anchor_words=None, anchor_top=None,
            anchor_bot=None, anchor_random=None,
@@ -39,7 +40,7 @@ def align(wv1, wv2, anchor_indices=None, anchor_words=None, anchor_top=None,
         v2 = [wv2[w] for w in wv2.words if w not in exclude]
     v1 = np.array(v1)
     v2 = np.array(v2)
-    if method=="procrustes":  # align with OP
+    if method == "procrustes":  # align with OP
         Q, _ = orthogonal_procrustes(v1, v2)
 
     wv1_ = WordVectors(words=wv1.words, vectors=np.dot(wv1.vectors, Q))

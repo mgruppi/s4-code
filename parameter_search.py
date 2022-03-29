@@ -207,11 +207,16 @@ if __name__ == "__main__":
     parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
+    parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
 
     args = parser.parse_args()
 
     normalized = args.normalized
-    languages = ["english", "german", "latin", "swedish"]
+
+    if args.languages is None:
+        languages = ["english", "german", "latin", "swedish"]
+    else:
+        languages = args.languages
 
     if args.param == "r":
         if not args.no_semeval:
