@@ -96,9 +96,9 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
 def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10,
                            cls=cosine_cls,
                            r=1,
-                           n_steps=250,
-                           n_pos_upper=1500,
-                           n_neg_upper=1500,
+                           n_steps=500,
+                           n_pos_upper=5000,
+                           n_neg_upper=5000,
                            align_method="s4a",
                            **kwargs):
     """

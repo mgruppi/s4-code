@@ -4,14 +4,16 @@ import seaborn as sns
 import os
 
 
-f_se = "param_search_results_semeval.txt"
-f_en = "param_search_results_ukus.txt"
+f_se = "param_search_n_results_semeval.txt"
+f_en = "param_search_n_results_ukus.txt"
 
-path_out = "results/r_search/"
-if not os.path.exists(path_out):
-    os.makedirs(path_out)
+path_out_r = "results/r_search/"
+path_out_n = "results/n_search/"
+if not os.path.exists(path_out_r):
+    os.makedirs(path_out_r)
 
 df_se = pd.read_csv(f_se)
+df_en = pd.read_csv(f_en)
 
 print(df_se)
 lang = "english"
@@ -20,64 +22,52 @@ metric = "accuracy"
 
 languages = ["english", "german", "latin", "swedish"]
 metrics = ["accuracy", "precision", "recall", "f1"]
+parameter = "n"
 
-for lang in languages:
-    df = df_se[df_se["language"] == lang]
+# Parameter r plot
+if parameter == "r":  # skip
+    for lang in languages:
+        n_pos = 100
+        n_neg = 100
+        df = df_se[(df_se["language"] == lang) & (df_se["n_pos"] == n_pos) & (df_se["n_neg"] == n_neg)]
+
+        for m in metrics:
+            sns.relplot(data=df, x="r", y=m, kind="line", hue="cls_name")
+            plt.savefig(os.path.join(path_out_r, "semeval_%s_%s.png" % (lang, m)))
 
     for m in metrics:
-        sns.relplot(data=df, x="r", y=m, kind="line", hue="cls_name")
-        plt.savefig(os.path.join(path_out, "semeval_%s_%s.png" % (lang, m)))
+        sns.relplot(data=df_en, x="r", y=m, kind="line", hue="cls_name")
+        plt.savefig(os.path.join(path_out_r, "ukus_%s.png" % m))
 
+# Parameter n plot
+elif parameter == "n":
+    for lang in languages:
+        r = 1
+        df_se["n_diff"] = (df_se["n_pos"]-df_se["n_neg"])/max(df_se["n_pos"])
+        df = df_se[(df_se["language"] == lang) & (df_se["r"] == r)]
+        for m in metrics:
+            sns.relplot(data=df, x="n_pos", y=m, kind="line", hue="cls_name")
+            plt.tight_layout()
+            plt.savefig(os.path.join(path_out_n, "semeval_n_pos_%s_%s.png") % (lang, m))
+            plt.close()
+            sns.relplot(data=df, x="n_neg", y=m, kind="line", hue="cls_name")
+            plt.tight_layout()
+            plt.savefig(os.path.join(path_out_n, "semeval_n_neg_%s_%s.png") % (lang, m))
+            plt.close()
+            sns.relplot(data=df, x="n_diff", y=m, kind="line", hue="cls_name")
+            plt.tight_layout()
+            plt.savefig(os.path.join(path_out_n, "semeval_n_diff_%s_%s.png" % (lang, m)))
+            plt.close()
 
-df_en = pd.read_csv(f_en)
-for m in metrics:
-    sns.relplot(data=df_en, x="r", y=m, kind="line", hue="cls_name")
-    plt.savefig(os.path.join(path_out, "ukus_%s.png" % m))
+    df_en["n_diff"] = (df_en["n_pos"] - df_en["n_neg"]) / max(df_en["n_pos"])
+    for m in metrics:
+        sns.relplot(data=df_en, x="n_pos", y=m, kind="line", hue="cls_name")
+        plt.savefig(os.path.join(path_out_n, "ukus_%s.png" % m))
+        plt.close()
+        sns.relplot(data=df_en, x="n_neg", y=m, kind="line", hue="cls_name")
+        plt.savefig(os.path.join(path_out_n, "ukus_%s.png" % m))
+        plt.close()
+        sns.relplot(data=df_en, x="n_diff", y=m, kind="line", hue="cls_name")
+        plt.savefig(os.path.join(path_out_n, "ukus_%s.png" % m))
+        plt.close()
 
-# files = ["param_search_results_semeval_cosine.txt", "param_search_results_semeval_s4.txt"]
-#
-# for f in files:
-#     df = pd.read_csv(f, index_col=False)
-#     sns.relplot(data=df, x="r", y="accuracy", kind="line", hue="language")
-#     plt.legend()
-#     plt.show()
-#
-#
-# files_ukus = ["param_search_results_ukus_cosine_03.txt", "param_search_results_ukus_s4.txt"]
-#
-# for f in files:
-#     df = pd.read_csv(f, index_col=False)
-#     sns.relplot(data=df, x="r", y="accuracy", kind="line")
-#     plt.legend()
-#     plt.show()
-
-
-# df = pd.read_csv("results_param_search_semeval.txt", sep="|", header=0, index_col=False,
-#                  names=["language", "mean_accuracy", "max_accuracy", "r"])
-#
-# print(df)
-#
-# for lang in df["language"].unique():
-#     print(lang)
-#     x = df[df["language"] == lang]
-#     plt.plot(x["r"], x["mean_accuracy"], label=lang)
-#
-#
-# plt.xlabel("r")
-# plt.ylabel("acc")
-# plt.legend()
-# plt.show()
-#
-#
-# df_u = pd.read_csv("results_r_ukus.txt", sep="|", header=0, index_col=False,
-#                    names=["cls_method", "align_method", "acc", "prec", "recall", "f1", "r"])
-#
-# for cls in df_u["cls_method"].unique():
-#     print(cls)
-#     x = df_u[df_u["cls_method"] == cls]
-#     plt.plot(x["r"], x["acc"], label=cls)
-#
-# plt.xlabel("r")
-# plt.ylabel("acc")
-# plt.legend()
-# plt.show()
