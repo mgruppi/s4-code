@@ -142,9 +142,11 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                                                       cls_model=cls_model,
                                                       iters=20,
                                                       )
-                wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
+                n_landmarks = len(landmarks)
+                if n_landmarks > 0:
+                    wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
                 acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
-                res_tuple = (r, n_pos, n_neg, acc, prec, rec, f1)
+                res_tuple = (r, n_pos, n_neg, n_landmarks, acc, prec, rec, f1)
                 print(*res_tuple, sep=",")
                 yield res_tuple
 
@@ -272,7 +274,7 @@ if __name__ == "__main__":
             cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
                          "cosine_090"]
             fout = open("param_search_n_results_semeval.txt", "w")
-            fout.write("language,cls_name,r,n_pos,n_neg,accuracy,precision,recall,f1\n")
+            fout.write("language,cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
             for lang in languages:
                 wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
 
@@ -294,7 +296,7 @@ if __name__ == "__main__":
                            {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
 
             fout = open("param_search_n_results_ukus.txt", "w")
-            fout.write("cls_name,r,n_pos,n_neg,accuracy,precision,recall,f1\n")
+            fout.write("cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
             wv1, wv2, targets, y_true = read_ukus_data(normalized)
             targets_1, targets_2 = zip(*targets)
             for name, params in zip(cls_names, ukus_params):
