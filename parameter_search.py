@@ -121,9 +121,9 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
         result_tuple: Yields tuples with the results (r, n_pos, n_neg, accuracy, precision, recall, f1)
     """
     np.random.seed(1)
-    n_pos_range = np.arange(100, n_pos_upper+100, n_steps)
+    n_pos_range = np.arange(200, n_pos_upper+100, n_steps)
     print("N_pos range", n_pos_range)
-    n_neg_range = np.arange(100, n_neg_upper+100, n_steps)
+    n_neg_range = np.arange(200, n_neg_upper+100, n_steps)
     print("N_neg range", n_neg_range)
 
     cls_model = S4Network(wv1.dimension*2)
