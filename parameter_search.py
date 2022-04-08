@@ -145,9 +145,11 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                 n_landmarks = len(landmarks)
                 if n_landmarks > 0:
                     wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
-                acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
-                res_tuple = (r, n_pos, n_neg, n_landmarks, acc, prec, rec, f1)
-                print(*res_tuple, sep=",")
+                    acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
+                    res_tuple = (r, n_pos, n_neg, n_landmarks, acc, prec, rec, f1)
+                    print(*res_tuple, sep=",")
+                else:
+                    res_tuple = ()
                 yield res_tuple
 
 
@@ -287,7 +289,8 @@ if __name__ == "__main__":
                                                            num_trials=args.num_trials,
                                                            **params)
                     for res in n_experiments:
-                        print(lang, name, *res, sep=",", file=fout)
+                        if len(res) > 0:
+                            print(lang, name, *res, sep=",", file=fout)
             fout.close()
 
         if not args.no_ukus:
@@ -306,5 +309,6 @@ if __name__ == "__main__":
                                                        **params)
 
                 for res in n_experiments:
-                    print(name, *res, sep=",", file=fout)
+                    if len(res) > 0:
+                        print(name, *res, sep=",", file=fout)
 
