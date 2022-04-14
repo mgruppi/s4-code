@@ -1,0 +1,27 @@
+|Global|Noise-Aware|S4-A|Common| |
+|------|-----------|----|------|-|
+|correlated||clearance|accession|precaution|
+|equation||copy|ancestor|primer|
+|fdr||expression|ass|reproduction|
+|inhibit||helsinki|cant|shedding|
+|inhibited||ire|copyright|suspicion|
+|isolates||obstruction|creative|tracing|
+|lockdown||pressure|distancing|transmission|
+|mortality||probe|dos|turnaround|
+|mutation||resolution|dose|vaccine|
+|peep||sign|funder|ventilation|
+|promoter||trial|gift|washed|
+|sequencing||wall|holder|wastewater|
+||||humidity|york|
+||||immunity||
+||||immunodeficiency||
+||||killer||
+||||kindly||
+||||license||
+||||load||
+||||mouse||
+||||nervous||
+||||nile||
+||||oxygen||
+||||pdb||
+||||perpetuity||
