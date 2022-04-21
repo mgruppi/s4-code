@@ -45,9 +45,11 @@ def s4_cls(wv1, wv2, targets_1, targets_2, y_true, **kwargs):
     return accuracy, precision, recall, f1
 
 
-def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upper=2,
+def run_r_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upper=2,
                     cls=cosine_cls, r_steps=11,
                     align_method="s4a",
+                    n_pos=100,
+                    n_neg=100,
                     **kwargs):
     """
     Performs experiments by varying R in a range for a given input
@@ -69,11 +71,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
     np.random.seed(1)
     r_range = np.linspace(0, r_upper, r_steps)
     print("R range", r_range)
-
-    results = list()
-
     cls_model = S4Network(wv1.dimension*2)
-
     for r_ in r_range:
         for i in range(num_trials):
             if align_method == "global":
@@ -83,14 +81,25 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true, num_trials=10, r_upp
                                                   verbose=0,
                                                   rate=r_,
                                                   cls_model=cls_model,
+                                                  n_targets=n_pos,
+                                                  n_negatives=n_neg,
                                                   iters=20
                                                   )
-            wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
-            acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
-            res_tuple = (r_, acc, prec, rec, f1)
-            print(*res_tuple, sep=",")
-            results.append(res_tuple)
-    return results
+            # wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
+            # acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
+            # res_tuple = (r_, acc, prec, rec, f1)
+            # print(*res_tuple, sep=",")
+            # yield res_tuple
+
+            n_landmarks = len(landmarks)
+            if n_landmarks > 0:
+                wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
+                acc, prec, rec, f1 = cls(wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, **kwargs)
+                res_tuple = (r_, n_pos, n_neg, n_landmarks, acc, prec, rec, f1)
+                print(*res_tuple, sep=",")
+            else:
+                res_tuple = ()
+            yield res_tuple
 
 
 def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10,
@@ -230,14 +239,14 @@ if __name__ == "__main__":
             cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
                          "cosine_090"]
 
-            fout = open("param_search_results_semeval.txt", "w")
+            fout = open("param_search_r_results_semeval.txt", "w")
             fout.write("language,cls_name,r,accuracy,precision,recall,f1\n")
 
             for lang in languages:
                 wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
 
                 for name, params in zip(cls_names, semeval_params):
-                    results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
+                    results_semeval = run_r_experiments(wv1, wv2, targets, targets, y_true,
                                                       num_trials=args.num_trials,
                                                       **params
                                                       )
@@ -251,12 +260,12 @@ if __name__ == "__main__":
             ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
                            {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
 
-            fout = open("param_search_results_ukus.txt", "w")
-            fout.write("cls_name,r,accuracy,precision,recall,f1\n")
+            fout = open("param_search_r_results_ukus.txt", "w")
+            fout.write("cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
             wv1, wv2, targets, y_true = read_ukus_data(normalized)
             targets_1, targets_2 = zip(*targets)
             for name, params in zip(cls_names, ukus_params):
-                results_ukus = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
+                results_ukus = run_r_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                num_trials=args.num_trials,
                                                align_method="global",
                                                **params)
