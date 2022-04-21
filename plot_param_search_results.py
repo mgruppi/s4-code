@@ -3,10 +3,18 @@ import pandas as pd
 import seaborn as sns
 import os
 import numpy as np
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--f_se", type=str, default="ablations/param_search_n_results_semeval.txt",
+                    help="Path to semeval experiment data.")
+parser.add_argument("--f_en", type=str, default="ablations/param_search_n_results_ukus.txt",
+                    help="Path to UKUS experiment data.")
 
-f_se = "ablations/param_search_n_results_semeval_normalized.txt"
-f_en = "ablations/param_search_n_results_ukus_normalized.txt"
+args = parser.parse_args()
+
+f_se = args.f_se
+f_en = args.f_en
 
 path_out_r = "results/r_search/"
 path_out_n = "results/n_search/"
@@ -56,11 +64,14 @@ elif parameter == "n":
 
         for cls_name in classifiers:
             for m in metrics:
+                # v_min and v_max are used to determine the range of the color scale and fix it for each language
+                v_min = df[m].min()  
+                v_max = df[m].max()
                 x = np.zeros((len(unique_n_pos), len(unique_n_neg)))
                 mask = np.zeros(x.shape)
                 for i, n_p in enumerate(unique_n_pos):
                     for j, n_n in enumerate(unique_n_neg):
-                        print(n_p, n_n, cls_name)
+                        # print(n_p, n_n, cls_name)
                         # print(df.loc[(n_p, n_n, cls_name)])
                         try:
                             x[i][j] = df.loc[(n_p, n_n, cls_name)][m]
@@ -69,7 +80,7 @@ elif parameter == "n":
                             print("Index not found - ", n_p, n_n, cls_name, " - ", e)
 
                 sns.heatmap(x, mask=mask, xticklabels=unique_n_pos, yticklabels=unique_n_neg,
-                            annot=True)
+                            annot=True, vmin=v_min, vmax=v_max)
                 plt.title("%s - %s - %s" % (lang, m, cls_name))
                 plt.xlabel("n_pos")
                 plt.ylabel("n_neg")
@@ -99,7 +110,7 @@ elif parameter == "n":
         x = np.zeros((len(unique_n_pos), len(unique_n_neg)))
         for i, n_p in enumerate(unique_n_pos):
             for j, n_n in enumerate(unique_n_neg):
-                print(n_p, n_n, cls_name)
+                # print(n_p, n_n, cls_name)
                 # print(df.loc[(n_p, n_n, cls_name)])
                 try:
                     x[i][j] = df.loc[(n_p, n_n, cls_name)][m]
