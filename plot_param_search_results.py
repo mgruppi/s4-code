@@ -10,6 +10,7 @@ parser.add_argument("--f_se", type=str, default="ablations/param_search_n_result
                     help="Path to semeval experiment data.")
 parser.add_argument("--f_en", type=str, default="ablations/param_search_n_results_ukus.txt",
                     help="Path to UKUS experiment data.")
+parser.add_argument("--parameter", choices=["n", "r"], default="n", help="Parameter to plot (r or n)")
 
 args = parser.parse_args()
 
@@ -32,7 +33,7 @@ metric = "accuracy"
 languages = ["english", "german", "latin", "swedish"]
 metrics = ["accuracy", "precision", "recall", "f1"]
 classifiers = ["cosine_050", "cosine_025", "cosine_075"]
-parameter = "n"
+parameter = args.parameter
 
 # Parameter r plot
 if parameter == "r":  # skip
