@@ -221,6 +221,8 @@ if __name__ == "__main__":
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
+    parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
+    parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
 
     args = parser.parse_args()
 
@@ -248,6 +250,8 @@ if __name__ == "__main__":
                 for name, params in zip(cls_names, semeval_params):
                     results_semeval = run_r_experiments(wv1, wv2, targets, targets, y_true,
                                                       num_trials=args.num_trials,
+                                                      r_upper=args.r_upper,
+                                                      r_steps=args.r_steps,
                                                       **params
                                                       )
                     for res in results_semeval:
@@ -267,6 +271,8 @@ if __name__ == "__main__":
             for name, params in zip(cls_names, ukus_params):
                 results_ukus = run_r_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                num_trials=args.num_trials,
+                                               r_upper=args.r_upper,
+                                               r_steps=args.r_steps,
                                                align_method="global",
                                                **params)
 
