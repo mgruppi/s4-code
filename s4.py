@@ -42,7 +42,8 @@ def negative_samples(words, size, p=None):
 
 
 def inject_change_single(wv, w, words, v_a, alpha, replace=False,
-                         max_tries=50):
+                         max_tries=50,
+                         choice_method='random'):
     """
     Injects change to word w in wv by randomly selecting a word t in wv
     and injecting the sense of t in to w.
@@ -55,9 +56,14 @@ def inject_change_single(wv, w, words, v_a, alpha, replace=False,
             wv      -   WordVectors of the corpus to be modified
             w       -   (str) Word to be modified
             words   -   (list) Pool of words to sample from, injecting sense
-            v_a     -   (np.ndarray) word vector of w in the source parallel to wv
+            v_a     -   (np.ndarray) word vector of w in the parallel source to wv
             alpha   -   (float) Rate of injected change
             replace -   (bool) Whether to replace w with t instead of 'moving' w towards t
+            max_tries - (int) Maximum number of attempts made in order to achieve the minimum perturbation threshold
+            choice_method - (str) How to choose the destination words one of {'random', 'close', 'far'}
+                            - 'random' uniformly chooses a random word
+                            - 'close' chooses a word based on the cosine similarity distribution
+                            - 'far' chooses a word based on the cosine distance distribution
     Returns:
             x       -   (np.ndarray) modified vector of w
     """
@@ -66,7 +72,7 @@ def inject_change_single(wv, w, words, v_a, alpha, replace=False,
     c = 0
     tries = 0
     w_id = wv.word_id[w]
-    v_b = np.copy(wv.vectors[w_id])
+    v_b = np.copy(wv.vectors[w_id])  # vb stores the modified vector
     while c < cos_t and tries < max_tries:
         tries += 1
         selected = np.random.choice(words)  # select word with new sense
@@ -301,7 +307,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         iters       - max no. of iterations
         n_targets   - number of positive samples to generate
         n_negatives - number of negative samples
-        fast        - use fast semantic change simulation
+        fast        - (deprecated) use fast semantic change simulation
         rate        - rate of semantic change injection
         t           - classificaiton threshold (0.5)
         t_overlap   - overlap threshold for (stop criterion)
@@ -394,7 +400,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
         # Randomly sample words to inject change to
         # If no word is flagged as non_landmarks, sample from all words
-        # In practice, this should never occur when selecting landmarks
+        # In practice, this should not occur when selecting landmarks
         # but only for classification when aligning on all words
         if len(non_landmarks) > 0:
             targets = np.random.choice(non_landmarks, n_targets)
