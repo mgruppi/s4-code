@@ -504,12 +504,12 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         v1_out = np.array([wv1[w] for w in non_landmarks])
         v2_out = np.array([wv2_original[w] for w in non_landmarks])
 
-        alignment_loss = np.linalg.norm(v1_land-v2_land)**2/len(v1_land)
+        alignment_loss = np.linalg.norm(v1_land-v2_land)**2/(len(v1_land) + 1e-5)
         alignment_loss_hist.append(alignment_loss)
         cumulative_alignment_hist.append(np.mean(alignment_loss_hist[-avg_window:]))
 
         # out loss
-        alignment_out_loss = np.linalg.norm(v1_out-v2_out)**2/len(v1_out)
+        alignment_out_loss = np.linalg.norm(v1_out-v2_out)**2/(len(v1_out) + 1e-5)
         alignment_out_hist.append(alignment_out_loss)
         cumulative_out_hist.append(np.mean(alignment_out_hist[-avg_window:]))
 

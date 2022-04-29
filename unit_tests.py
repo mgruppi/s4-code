@@ -20,10 +20,6 @@ def inject_change_test(wv1, wv2):
 
     choice_methods = ['random', 'close', 'far']
     d_matrix = pairwise_distances(wvb.vectors, metric='cosine', n_jobs=-1)
-    v_means = wvb.vectors.mean(axis=0)
-    v_std = wvb.vectors.std(axis=0)
-
-    print(v_means)
 
     d_cos = dict()
     times = dict()
