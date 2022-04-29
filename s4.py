@@ -15,7 +15,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, log_loss
+from sklearn.metrics import accuracy_score, log_loss, pairwise_distances
 from scipy.spatial.distance import cosine, euclidean
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -31,6 +31,28 @@ np.random.seed(1)
 tf.random.set_seed(1)
 
 
+def cumulative_choice(array, p=None):
+    """
+    Performs fast choice based on the cumulative distribution of elements in `array`.
+    Arguments:
+        array: (array-like) Elements to choose from
+        p:  (array-like) Probabilities of choosing each element from `array`.
+            if `None`, then every element is chosen with the same probability.
+    Returns:
+        x: (scalar) The chosen element(s).
+    """
+    assert len(array) == len(p) or p is None
+    
+    r = np.random.random()
+    cum = 0  # cumulative sum
+
+    for i, p_ in enumerate(p):
+        cum += p_
+        if r < cum:
+            break
+    return array[i]                
+
+
 def negative_samples(words, size, p=None):
     """
     Returns negative samples of semantic change
@@ -43,14 +65,15 @@ def negative_samples(words, size, p=None):
 
 def inject_change_single(wv, w, words, v_a, alpha, replace=False,
                          max_tries=50,
-                         choice_method='random'):
+                         choice_method='random',
+                         distances=None):
     """
     Injects change to word w in wv by randomly selecting a word t in wv
     and injecting the sense of t in to w.
     The modified vector of w must have a higher cosine distance to v_a
-    than its original version. This is done by sampling t while the cosine of
-    w is not greater than that of v_a and wv(w) or until a max_tries.
-    v_a is the vector of word w in the parallel corpus (not wv).
+    than its original version. This is done by sampling t such that the cosine similarity of
+    (w, t) is not greater than that of v_a and wv(w) or until a max_tries, 
+    where v_a is the vector of word w in the parallel corpus (not wv).
 
     Arguments:
             wv      -   WordVectors of the corpus to be modified
@@ -64,6 +87,7 @@ def inject_change_single(wv, w, words, v_a, alpha, replace=False,
                             - 'random' uniformly chooses a random word
                             - 'close' chooses a word based on the cosine similarity distribution
                             - 'far' chooses a word based on the cosine distance distribution
+            distances - (array-like) List of distances between the target vector wv[w] and every other word in wv (used for close and far)
     Returns:
             x       -   (np.ndarray) modified vector of w
     """
@@ -73,9 +97,25 @@ def inject_change_single(wv, w, words, v_a, alpha, replace=False,
     tries = 0
     w_id = wv.word_id[w]
     v_b = np.copy(wv.vectors[w_id])  # vb stores the modified vector
+
+    if choice_method != 'random' and distances is None:
+        distances = np.fromiter((cosine(v_b, v) for v in wv.vectors), dtype=float)
+
     while c < cos_t and tries < max_tries:
         tries += 1
-        selected = np.random.choice(words)  # select word with new sense
+        if choice_method == 'random':
+            selected = np.random.choice(words)  # select word with new sense
+        elif choice_method == 'far':
+            p_cos = distances/(distances.sum())  # larger distances are sampled more
+            selected = np.random.choice(words, p=p_cos)
+            # selected = cumulative_choice(words, p=p_cos)
+        elif choice_method == 'close':
+            cos_sim = 1-distances  # Convert cosine distances to similarities
+            p_sim = (cos_sim + 1)/((cos_sim + 1).sum())  # Shift similarities co-domain from [-1, 1] to [0,2]
+            selected = np.random.choice(words, p=p_sim)
+        else:
+            print("S4 Error: invalid choice_method")
+            return v_b
         if not replace:
             b = wv[w] + alpha*wv[selected]
             v_b = b
@@ -179,25 +219,27 @@ def threshold_crossvalidation(wv1, wv2, iters=100,
                                         t=0.5,
                                         landmarks=None,
                                         t_overlap=1,
-                                        debug=False):
+                                        debug=False,
+                                        inject_choice='random'):
     """
     Runs crossvalidation over self-supervised samples, carrying out a model
     selection to determine the best cosine threshold to use in the final
     prediction.
 
     Arguments:
-        wv1, wv2    - input WordVectors - required to be intersected and ALIGNED before call
-        plot        - 1: plot functions in the end 0: do not plot
-        iters       - max no. of iterations
-        n_fold      - n-fold crossvalidation (1 - leave one out, 10 - 10-fold cv, etc.)
-        n_targets   - number of positive samples to generate
-        n_negatives - number of negative samples
-        fast        - use fast semantic change simulation
-        rate        - rate of semantic change injection
-        t           - classificaiton threshold (0.5)
-        t_overlap   - overlap threshold for (stop criterion)
-        landmarks   - list of words to use as landmarks (classification only)
-        debug       - toggles debugging mode on/off. Provides reports on several metrics. Slower.
+        wv1, wv2        - input WordVectors. They are required to be INTERSECTED and ALIGNED before call
+        plot            - 1: plot functions in the end 0: do not plot
+        iters           - max no. of iterations
+        n_fold          - n-fold crossvalidation (1 - leave one out, 10 - 10-fold cv, etc.)
+        n_targets       - number of positive samples to generate
+        n_negatives     - number of negative samples
+        fast            - use fast semantic change simulation
+        rate            - rate of semantic change injection
+        t               - classificaiton threshold (0.5)
+        t_overlap       - overlap threshold for (stop criterion)
+        landmarks       - list of words to use as landmarks (classification only)
+        debug           - toggles debugging mode on/off. Provides reports on several metrics. Slower.
+        inject_choice   - choice method for sense injection {'random', 'far', 'close', 'new'}  
     Returns:
         t - selected cosine threshold t
     """
@@ -205,6 +247,8 @@ def threshold_crossvalidation(wv1, wv2, iters=100,
     wv2_original = WordVectors(words=wv2.words, vectors=wv2.vectors.copy())
     landmark_set = set(landmarks)
     non_landmarks = [w for w in wv1.words if w not in landmark_set]
+
+    d_matrix = pairwise_distances(wv2_original.vectors, metric='cosine', n_jobs=-1)
 
     for iter in range(iters):
 
@@ -227,7 +271,7 @@ def threshold_crossvalidation(wv1, wv2, iters=100,
 
             # Simulate semantic change in target word
             v = inject_change_single(wv2_original, target, wv1.words,
-                                     wv1[target], rate)
+                                     wv1[target], rate, distances=d_matrix[wv2_original.word_id[target]])
 
             pos_vectors[target] = v
 
@@ -288,6 +332,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
           t_overlap=1,
           landmarks=None,
           update_landmarks=True,
+          inject_choice='random',
           return_model=False,
           debug=False):
     """
@@ -313,6 +358,8 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         t_overlap   - overlap threshold for (stop criterion)
         landmarks   - list of words to use as landmarks (classification only)
         update_landmarks - if True, learns landmarks. Otherwise, learns classification model.
+        inject_choice   - Method of sense injection {'random', 'far', 'close', 'new'}
+        'return_model'- If True, returns the classification model
         debug       - toggles debugging mode on/off. Provides reports on several metrics. Slower.
     Returns:
         if update_landmarks is True:
@@ -392,6 +439,9 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
     prev_landmarks = set(landmarks)
     t_init = time.time() - t0
+    
+    d_matrix = pairwise_distances(wv2_original.vectors, metric='cosine', n_jobs=-1)
+
     for iter in range(iters):
 
         t0 = time.time()
@@ -413,7 +463,9 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
             # Simulate semantic change in target word
             v = inject_change_single(wv2_original, target, wv1.words,
-                                     wv1[target], rate)
+                                     wv1[target], rate,
+                                     distances=d_matrix[wv2_original.word_id[target]],
+                                     choice_method=inject_choice)
 
             pos_vectors[target] = v
 
