@@ -294,7 +294,7 @@ if __name__ == "__main__":
                          "cosine_090"]
 
             fout = open("param_search_r_results_semeval.txt", "w")
-            fout.write("language,cls_name,r,accuracy,precision,recall,f1\n")
+            fout.write("language,cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
 
             for lang in languages:
                 wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
