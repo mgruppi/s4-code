@@ -485,7 +485,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                     n_targets=_np,
                                                     n_negatives=_nn,
                                                     cls_model=cls_model,
-                                                    iters=2,  # TODO: change back to 10-20 range
+                                                    iters=20, 
                                                 )
             n_landmarks = len(landmarks)
             header_tuple = ('r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'accuracy', 'precision',
