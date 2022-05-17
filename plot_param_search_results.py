@@ -43,7 +43,6 @@ if not os.path.exists(path_out):
 
 for ds in datasets:
     df_d = df[df['dataset'] == ds]
-
     
     for m in metrics:
         sns.relplot(data=df_d, x="r", y=m, kind="line", hue="cls")
@@ -52,12 +51,5 @@ for ds in datasets:
     
     # Plot positive/negative accuracies
     dfm = df_d[['r','cls','positive_accuracy','negative_accuracy']].melt(['r', 'cls'], var_name='group', value_name='vals')
-
     sns.relplot(data=dfm, x="r", y="vals", kind="line", hue="cls", style='group', ci=None)
-
     plt.savefig(os.path.join(path_out, "%s_posneg.png" % ds))
-        
-
-
-
-
