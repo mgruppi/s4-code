@@ -3,6 +3,7 @@ Runs parameter search for `r` in S4
 """
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import pandas as pd
 from WordVectors import WordVectors, intersection
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
@@ -263,6 +264,28 @@ def read_ukus_data(normalized=False):
     return wv_uk, wv_us, dico, y_true
 
 
+def read_spanish_data(normalized=False, truth_column="change_binary"):
+    """
+    Reads spanish word vectors + ground truth data from the LChange2022 Shared Task.
+    Arguments:
+        normalized: Boolean value for reading normalized WordVectors
+        truth_column: Name of the truth column to use. Defaults to "change_binary".
+                        Other options are "change_binary_gain" and "change_binary_loss".
+    """
+    path_old = "wordvectors/spanish/old.vec"
+    path_modern = "wordvectors/spanish/modern.vec"
+
+    wv1 = WordVectors(input_file=path_old, normalized=normalized)
+    wv2 = WordVectors(input_file=path_modern, normalized=normalized)
+    wv_old, wv_mod = intersection(wv1, wv2)
+
+    df = pd.read_csv("data/spanish/stats_groupings.csv", sep="\t")
+    targets = df["lemma"]
+    y_true = df[truth_column]
+
+    return wv_old, wv_mod, targets, y_true
+
+
 def old_main():
 
     parser = argparse.ArgumentParser()
@@ -272,6 +295,8 @@ def old_main():
                         help="Do not perform SemEval 2020 experiment")
     parser.add_argument("--no-ukus", dest="no_ukus", action="store_true",
                         help="Do not perform UKUS experiment")
+    parser.add_argument("--no-spanish", dest="no_spanish", action="store_true",
+                        help="Do not perform Spanish experiment")
     parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
@@ -335,6 +360,8 @@ def old_main():
                     print(name, *res, sep=",", file=fout)
 
             fout.close()
+        if not args.no_spanish:
+            cls_names = ["cosine_025"]
     elif args.param == "n":
         r_value = 1.0
         if not args.no_semeval:
@@ -507,6 +534,8 @@ def new_main():
                         help="Do not perform SemEval 2020 experiment")
     parser.add_argument("--no-ukus", dest="no_ukus", action="store_true",
                         help="Do not perform UKUS experiment")
+    parser.add_argument("--no-spanish", dest="no_spanish", action="store_true",
+                        help="Do not perform Spanish experiment")
     parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
@@ -615,6 +644,18 @@ def new_main():
                 print("ukus", normalized, *r, sep=',')
                 print("ukus", normalized, *r, sep=',', file=fout)           
 
+    if not args.no_spanish:
+        wv1, wv2, targets, y_true = read_spanish_data(normalized)
+        targets_1 = targets_2 = targets
+
+        results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
+                        r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
+                        choice_method=choice_methods, align_method=align_methods,
+                        classifier=classifiers)
+        for h, r in results:
+            print("spanish", r)
+            print("spanish", normalized, *r, sep=",")
+            print('spanish', normalized, *r, sep=',', file=fout)
     fout.close()
 
 
