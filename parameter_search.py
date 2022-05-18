@@ -511,18 +511,18 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                     rate=_r,
                                                     n_targets=_np,
                                                     n_negatives=_nn,
-                                                    cls_model=cls_model,
-                                                    iters=20, 
+                                                    cls_model='nn',
+                                                    iters=100, 
                                                 )
             n_landmarks = len(landmarks)
-            header_tuple = ('r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'accuracy', 'precision',
+            header_tuple = ('r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks', 'accuracy', 'precision',
                 'recall', 'f1', 'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
             if n_landmarks > 0:
                 wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
                 acc, prec, rec, f1, tn, fp, fn, tp = _cls[1](wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, threshold=_cls[2])
-                res_tuple = (_r, _np, _nn, _cm, _am, _cls[0], acc, prec, rec, f1, tn, fp, fn, tp)
+                res_tuple = (_r, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
             else:
-                res_tuple = (_r, _np, _nn, _cm, _am, _cls[0], -1, -1, -1, -1, -1, -1, -1, -1)
+                res_tuple = (_r, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
             yield (header_tuple, res_tuple)
 
 
@@ -536,14 +536,16 @@ def new_main():
                         help="Do not perform UKUS experiment")
     parser.add_argument("--no-spanish", dest="no_spanish", action="store_true",
                         help="Do not perform Spanish experiment")
-    parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
+    parser.add_argument("--num-trials", dest="num_trials", type=int, default=20,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
     parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
     parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
+    parser.add_argument("--flip-direction", dest="flip_direction", action="store_true", help="Run S4 in reverse direction")
     parser.add_argument("--output-file", dest='output_file', default='results_param_search.csv', type=str,
                         help='Change default output file')
+                    
 
     args = parser.parse_args()
 
@@ -555,8 +557,11 @@ def new_main():
         languages = args.languages
 
     # Make file header
-    header_tuple = ('dataset', 'normalized', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'accuracy', 'precision',
-    'recall', 'f1', 'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
+    header_tuple = (
+    'dataset', 'normalized', 'flipped', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks',
+    'accuracy', 'precision', 'recall', 'f1', 
+    'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
+
     fout = open(args.output_file, 'w')
     print(*header_tuple, sep=',', file=fout)
 
@@ -579,8 +584,8 @@ def new_main():
         cls_thresholds = [0.25, 0.5, 0.75, 0.90]
         classifiers = list(zip(cls_names, cls_func, cls_thresholds))
     elif args.param == "r":
-        n_pos_range = [500]
-        n_neg_range = [500]
+        n_pos_range = [200]
+        n_neg_range = [200]
         choice_methods = ['random']
         align_methods = ['s4a']
         cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
@@ -603,8 +608,8 @@ def new_main():
         n_neg_range = np.arange(500, 5500, 500)
         print("N_neg range", n_neg_range)
     elif args.param == "choice_method":
-        n_pos_range = [500]
-        n_neg_range = [500]
+        n_pos_range = [200]
+        n_neg_range = [200]
         align_methods = ['s4a']
         cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
         cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
@@ -615,8 +620,13 @@ def new_main():
 
     if not args.no_semeval:
         for lang in languages:
-            wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)  
-            targets_1 = targets_2 = targets
+            if not args.flip_direction:
+                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)  
+                targets_1 = targets_2 = targets
+            else:
+                wv2, wv1, targets, y_true = read_semeval_data(lang, normalized)
+                targets_1 = targets_2 = targets
+
 
             # For SemEval we repeat `target` in targets_1 and targets_2
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
@@ -628,12 +638,17 @@ def new_main():
 
             for h, r in results:
                 print(lang, r)
-                print('semeval_'+lang, normalized, *r, sep=',')
-                print('semeval_'+lang, normalized, *r, sep=',', file=fout)
+                print('semeval_'+lang, normalized, args.flip_direction, *r, sep=',')
+
+                print('semeval_'+lang, normalized, args.flip_direction, *r, sep=',', file=fout)
     
     if not args.no_ukus:
-            wv1, wv2, targets, y_true = read_ukus_data(normalized)
-            targets_1, targets_2 = zip(*targets)
+            if not args.flip_direction:
+                wv1, wv2, targets, y_true = read_ukus_data(normalized)
+                targets_1, targets_2 = zip(*targets)
+            else:
+                wv2, wv1, targets, y_true = read_ukus_data(normalized)
+                targets_2, targets_1 = zip(*targets)
 
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
@@ -641,12 +656,17 @@ def new_main():
                             classifier=classifiers)
             for h, r in results:
                 print("ukus", r)
-                print("ukus", normalized, *r, sep=',')
-                print("ukus", normalized, *r, sep=',', file=fout)           
+                print("ukus", normalized, args.flip_direction, *r, sep=',')
+
+                print("ukus", normalized, args.flip_direction, *r, sep=',', file=fout)           
 
     if not args.no_spanish:
-        wv1, wv2, targets, y_true = read_spanish_data(normalized)
-        targets_1 = targets_2 = targets
+        if not args.flip_direction:
+            wv1, wv2, targets, y_true = read_spanish_data(normalized)
+            targets_1 = targets_2 = targets
+        else:
+            wv2, wv1, targets, y_true = read_spanish_data(normalized)
+            targets_1 = targets_2 = targets
 
         results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                         r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
@@ -654,8 +674,9 @@ def new_main():
                         classifier=classifiers)
         for h, r in results:
             print("spanish", r)
-            print("spanish", normalized, *r, sep=",")
-            print('spanish', normalized, *r, sep=',', file=fout)
+            print("spanish", normalized, args.flip_direction, *r, sep=",")
+
+            print('spanish', normalized, args.flip_direction, *r, sep=',', file=fout)
     fout.close()
 
 
