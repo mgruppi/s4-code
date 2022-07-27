@@ -218,10 +218,15 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                 yield res_tuple
 
 
-def read_semeval_data(lang, normalized=False):
+def read_semeval_data(lang, normalized=False, pos_lemma=False):
     # Load SemEval 2020 data
-    corpus1_path = "wordvectors/semeval/%s-corpus1.vec" % lang
-    corpus2_path = "wordvectors/semeval/%s-corpus2.vec" % lang
+    if not pos_lemma:
+        corpus1_path = "wordvectors/semeval/%s-corpus1.vec" % lang
+        corpus2_path = "wordvectors/semeval/%s-corpus2.vec" % lang
+    else:
+        corpus1_path = "wordvectors/semeval/%s-corpus1_pos_lemma.vec" % lang
+        corpus2_path = "wordvectors/semeval/%s-corpus2_pos_lemma.vec" % lang
+
     wv1 = WordVectors(input_file=corpus1_path, normalized=normalized)
     wv2 = WordVectors(input_file=corpus2_path, normalized=normalized)
     wv1, wv2 = intersection(wv1, wv2)
@@ -235,9 +240,15 @@ def read_semeval_data(lang, normalized=False):
     return wv1, wv2, targets, y_true
 
 
-def read_ukus_data(normalized=False):
-    path_us = "wordvectors/ukus/coca.vec"
-    path_uk = "wordvectors/ukus/bnc.vec"
+def read_ukus_data(normalized=False, pos_lemma=False):
+
+    if not pos_lemma:
+        path_us = "wordvectors/ukus/coca.vec"
+        path_uk = "wordvectors/ukus/bnc.vec"
+    else:
+        path_us = "wordvectors/ukus/coca_pos_lemma.vec"
+        path_uk = "wordvectors/ukus/bnc_pos_lemma.vec"
+
     path_dict = "data/ukus/dict_similar.txt"
     path_dict_dis = "data/ukus/dict_dissimilar.txt"
 
@@ -264,7 +275,7 @@ def read_ukus_data(normalized=False):
     return wv_uk, wv_us, dico, y_true
 
 
-def read_spanish_data(normalized=False, truth_column="change_binary"):
+def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=False):
     """
     Reads spanish word vectors + ground truth data from the LChange2022 Shared Task.
     Arguments:
@@ -272,8 +283,13 @@ def read_spanish_data(normalized=False, truth_column="change_binary"):
         truth_column: Name of the truth column to use. Defaults to "change_binary".
                         Other options are "change_binary_gain" and "change_binary_loss".
     """
-    path_old = "wordvectors/spanish/old.vec"
-    path_modern = "wordvectors/spanish/modern.vec"
+
+    if pos_lemma:
+        path_old = "wordvectors/spanish/old.vec"
+        path_modern = "wordvectors/spanish/modern.vec"
+    else:
+        path_old = "wordvectors/spanish/old_pos_lemma.vec"
+        path_modern = "wordvectors/spanish/modern_pos_lemma.vec"
 
     wv1 = WordVectors(input_file=path_old, normalized=normalized)
     wv2 = WordVectors(input_file=path_modern, normalized=normalized)
@@ -284,176 +300,6 @@ def read_spanish_data(normalized=False, truth_column="change_binary"):
     y_true = df[truth_column]
 
     return wv_old, wv_mod, targets, y_true
-
-
-def old_main():
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("param", type=str, choices=["r", "n", "choice_method"],
-                        help="Type of parameter to search. r - rate of perturbation | n - no. of samples to perturb")
-    parser.add_argument("--no-semeval", dest="no_semeval", action="store_true",
-                        help="Do not perform SemEval 2020 experiment")
-    parser.add_argument("--no-ukus", dest="no_ukus", action="store_true",
-                        help="Do not perform UKUS experiment")
-    parser.add_argument("--no-spanish", dest="no_spanish", action="store_true",
-                        help="Do not perform Spanish experiment")
-    parser.add_argument("--num-trials", dest="num_trials", type=int, default=10,
-                        help="Number of trials per r value")
-    parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
-    parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
-    parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
-    parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
-
-    args = parser.parse_args()
-
-    normalized = args.normalized
-
-    if args.languages is None:
-        languages = ["english", "german", "latin", "swedish"]
-    else:
-        languages = args.languages
-
-    if args.param == "r":
-        if not args.no_semeval:
-            semeval_params = [{"threshold": 0.01, "cls": cosine_cls}, {"threshold": 0.25, "cls": cosine_cls},
-                              {"threshold": 0.5, "cls": cosine_cls}, {"threshold": 0.75, "cls": cosine_cls},
-                              {"threshold": 0.9, "cls": cosine_cls}]
-            cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
-                         "cosine_090"]
-
-            fout = open("param_search_r_results_semeval.txt", "w")
-            fout.write("language,cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
-
-            for lang in languages:
-                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
-
-                for name, params in zip(cls_names, semeval_params):
-                    results_semeval = run_r_experiments(wv1, wv2, targets, targets, y_true,
-                                                      num_trials=args.num_trials,
-                                                      r_upper=args.r_upper,
-                                                      r_steps=args.r_steps,
-                                                      **params
-                                                      )
-                    for res in results_semeval:
-                        print(lang, name, *res, sep=",", file=fout)
-
-            fout.close()
-
-        if not args.no_ukus:
-            cls_names = ["cosine_03", "cosine_05", "cosine_07", "s4d"]
-            ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
-                           {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
-
-            fout = open("param_search_r_results_ukus.txt", "w")
-            fout.write("cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
-            wv1, wv2, targets, y_true = read_ukus_data(normalized)
-            targets_1, targets_2 = zip(*targets)
-            for name, params in zip(cls_names, ukus_params):
-                results_ukus = run_r_experiments(wv1, wv2, targets_1, targets_2, y_true,
-                                               num_trials=args.num_trials,
-                                               r_upper=args.r_upper,
-                                               r_steps=args.r_steps,
-                                               align_method="global",
-                                               **params)
-
-                for res in results_ukus:
-                    print(name, *res, sep=",", file=fout)
-
-            fout.close()
-        if not args.no_spanish:
-            cls_names = ["cosine_025"]
-    elif args.param == "n":
-        r_value = 1.0
-        if not args.no_semeval:
-            semeval_params = [{"threshold": 0.01, "cls": cosine_cls},
-                              {"threshold": 0.25, "cls": cosine_cls},
-                              {"threshold": 0.5, "cls": cosine_cls},
-                              {"threshold": 0.75, "cls": cosine_cls},
-                              {"threshold": 0.9, "cls": cosine_cls}]
-            cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
-                         "cosine_090"]
-            fout = open("param_search_n_results_semeval.txt", "w")
-            fout.write("language,cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
-            for lang in languages:
-                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
-
-                for name, params in zip(cls_names, semeval_params):
-                    # results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
-                    #                                   num_trials=args.num_trials,
-                    #                                   **params
-                    #                                   )
-                    n_experiments = n_experiment_generator(wv1, wv2, targets, targets, y_true,
-                                                           num_trials=args.num_trials,
-                                                           **params)
-                    for res in n_experiments:
-                        if len(res) > 0:
-                            print(lang, name, *res, sep=",", file=fout)
-            fout.close()
-
-        if not args.no_ukus:
-            cls_names = ["cosine_03", "cosine_05", "cosine_07", "s4d"]
-            ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
-                           {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
-
-            fout = open("param_search_n_results_ukus.txt", "w")
-            fout.write("cls_name,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
-            wv1, wv2, targets, y_true = read_ukus_data(normalized)
-            targets_1, targets_2 = zip(*targets)
-            for name, params in zip(cls_names, ukus_params):
-                n_experiments = n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true,
-                                                       num_trials=args.num_trials,
-                                                       align_method="global",
-                                                       **params)
-
-                for res in n_experiments:
-                    if len(res) > 0:
-                        print(name, *res, sep=",", file=fout)
-
-    elif args.param == 'choice_method':
-        if not args.no_semeval:
-            semeval_params = [{"threshold": 0.01, "cls": cosine_cls},
-                              {"threshold": 0.25, "cls": cosine_cls},
-                              {"threshold": 0.5, "cls": cosine_cls},
-                              {"threshold": 0.75, "cls": cosine_cls},
-                              {"threshold": 0.9, "cls": cosine_cls}]
-            cls_names = ["cosine_001", "cosine_025", "cosine_050", "cosine_075",
-                         "cosine_090"]
-            fout = open("param_search_choice_method_results_semeval.txt", "w")
-            fout.write("language,cls_name,choice_method,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
-            for lang in languages:
-                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)
-
-                for name, params in zip(cls_names, semeval_params):
-                    # results_semeval = run_experiments(wv1, wv2, targets, targets, y_true,
-                    #                                   num_trials=args.num_trials,
-                    #                                   **params
-                    #                                   )
-                    n_experiments = choice_experiments(wv1, wv2, targets, targets, y_true,
-                                                           num_trials=args.num_trials,
-                                                           **params)
-                    for res in n_experiments:
-                        if len(res) > 0:
-                            print(lang, name, *res, sep=",", file=fout)
-            fout.close()
-
-        if not args.no_ukus:
-            cls_names = ["cosine_03", "cosine_05", "cosine_07", "s4d"]
-            ukus_params = [{"threshold": 0.3, "cls": cosine_cls}, {"threshold": 0.5, "cls": cosine_cls},
-                           {"threshold": 0.7, "cls": cosine_cls}, {"cls": s4_cls}]
-
-            fout = open("param_search_choice_method_results_ukus.txt", "w")
-            fout.write("cls_name,choice_method,r,n_pos,n_neg,n_landmarks,accuracy,precision,recall,f1\n")
-            wv1, wv2, targets, y_true = read_ukus_data(normalized)
-            targets_1, targets_2 = zip(*targets)
-            for name, params in zip(cls_names, ukus_params):
-                n_experiments = choice_experiments(wv1, wv2, targets_1, targets_2, y_true,
-                                                       num_trials=args.num_trials,
-                                                       align_method="global",
-                                                       **params)
-
-                for res in n_experiments:
-                    if len(res) > 0:
-                        print(name, *res, sep=",", file=fout)
 
 
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
@@ -545,11 +391,13 @@ def new_main():
     parser.add_argument("--flip-direction", dest="flip_direction", action="store_true", help="Run S4 in reverse direction")
     parser.add_argument("--output-file", dest='output_file', default='results_param_search.csv', type=str,
                         help='Change default output file')
+    parser.add_argument("--pos_lemma", action="store_true", help="Open the pos_lemma version of the embeddings.")
                     
 
     args = parser.parse_args()
 
     normalized = args.normalized
+    pos_lemma = args.pos_lemma
 
     if args.languages is None:
         languages = ["english", "german", "latin", "swedish"]
@@ -621,10 +469,10 @@ def new_main():
     if not args.no_semeval:
         for lang in languages:
             if not args.flip_direction:
-                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized)  
+                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma)  
                 targets_1 = targets_2 = targets
             else:
-                wv2, wv1, targets, y_true = read_semeval_data(lang, normalized)
+                wv2, wv1, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma)
                 targets_1 = targets_2 = targets
 
 
@@ -644,10 +492,10 @@ def new_main():
     
     if not args.no_ukus:
             if not args.flip_direction:
-                wv1, wv2, targets, y_true = read_ukus_data(normalized)
+                wv1, wv2, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma)
                 targets_1, targets_2 = zip(*targets)
             else:
-                wv2, wv1, targets, y_true = read_ukus_data(normalized)
+                wv2, wv1, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma)
                 targets_2, targets_1 = zip(*targets)
 
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
@@ -662,10 +510,10 @@ def new_main():
 
     if not args.no_spanish:
         if not args.flip_direction:
-            wv1, wv2, targets, y_true = read_spanish_data(normalized)
+            wv1, wv2, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma)
             targets_1 = targets_2 = targets
         else:
-            wv2, wv1, targets, y_true = read_spanish_data(normalized)
+            wv2, wv1, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma)
             targets_1 = targets_2 = targets
 
         results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
