@@ -69,6 +69,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     nlp = spacy.load(args.spacy_model)
+    nlp.add_pipe("sentencizer")
 
     output_vec_file = os.path.basename(args.input).split(".")[0]
     if args.pos_tag:
