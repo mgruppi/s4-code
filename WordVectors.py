@@ -75,10 +75,13 @@ class WordVectors:
     - dimension -- dimension of wordvectors
     - zipped -- a zipped list of (word, vec) used to construct the object
     - min_freq -- filter out words whose frequency is less than min_freq
+    - pos_tags -- If True, POS tags are retrieved as a suffix of the word, connected by '_'. 
+                    E.g: 'cat_NOUN' becomes 'cat' and a list of POS is created in the object.
     """
     def __init__(self, words=None, vectors=None, counts=None, zipped=None,
                  input_file=None, centered=True, normalized=False,
-                 min_freq=0, word_frequency=None):
+                 min_freq=0, word_frequency=None,
+                 clean_pos_tags=False):
 
         if words is not None and vectors is not None:
             self.word_id = OrderedDict()
@@ -99,6 +102,8 @@ class WordVectors:
             self.vectors = None
             self.read_file(input_file)
 
+        if clean_pos_tags:
+            self.process_pos_tags()
         if centered:
             self.center()
         if normalized:
@@ -106,6 +111,20 @@ class WordVectors:
 
         if word_frequency:
             self.filter_frequency(min_freq, word_frequency)
+
+    def process_pos_tags(self):
+        """
+        Remove all the POS tags from the list of words (appended by a '_').
+        """
+        self.pos_tag = np.array([""] * len(self.words))
+        for i, word in enumerate(self.words):
+            splits = word.split("_", 1)
+            if len(splits) < 2:  # No POS tag found
+                continue
+            w, pos_tag = splits
+            self.words[i] = w
+            self.word_id[w] = i
+            self.pos_tag[i] = pos_tag
 
     def center(self):
         self.vectors = self.vectors - self.vectors.mean(axis=0, keepdims=True)

@@ -218,7 +218,43 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                 yield res_tuple
 
 
-def read_semeval_data(lang, normalized=False, pos_lemma=False):
+def filter_pos_tags(wv, filter_pos):
+    """
+    Filter POS tags from WordVectors object.
+    Requires WV to have appended POS tags in words.
+    Only those POS tags in `filter_pos`are kept.
+
+    Args:
+        wv(WordVectors.WordVectors) : WordVectors to be modified.
+        filter_pos(set or iterable) : POS tags to filter.
+    
+    Returns:
+        wv_f(WordVectors.WordVectors) : Filtered WordVectors.
+    """
+
+    # If filter_pos is invalid, return original wv.
+    if len(filter_pos) == 0 or filter_pos is None:
+        return wv
+    
+    words = list()
+    vectors = list()
+
+    for w, v in zip(wv.words, wv.vectors):
+        splits = w.split("_", 1)
+        if len(splits) < 2:
+            continue
+        word, pos = splits
+
+        if pos in filter_pos:
+            words.append(word)
+            vectors.append(v)
+    
+    wv_f = WordVectors(words=words, vectors=vectors)
+
+    return wv_f
+
+
+def read_semeval_data(lang, normalized=False, pos_lemma=False, filter_pos=None):
     # Load SemEval 2020 data
     if not pos_lemma:
         corpus1_path = "wordvectors/semeval/%s-corpus1.vec" % lang
@@ -229,6 +265,11 @@ def read_semeval_data(lang, normalized=False, pos_lemma=False):
 
     wv1 = WordVectors(input_file=corpus1_path, normalized=normalized)
     wv2 = WordVectors(input_file=corpus2_path, normalized=normalized)
+
+    if filter_pos:
+        wv1 = filter_pos_tags(wv1, filter_pos)
+        wv2 = filter_pos_tags(wv2, filter_pos)
+
     wv1, wv2 = intersection(wv1, wv2)
 
     path_task1 = "data/semeval/truth/%s.txt" % lang
@@ -240,7 +281,7 @@ def read_semeval_data(lang, normalized=False, pos_lemma=False):
     return wv1, wv2, targets, y_true
 
 
-def read_ukus_data(normalized=False, pos_lemma=False):
+def read_ukus_data(normalized=False, pos_lemma=False, filter_pos=None):
 
     if not pos_lemma:
         path_us = "wordvectors/ukus/coca.vec"
@@ -254,6 +295,11 @@ def read_ukus_data(normalized=False, pos_lemma=False):
 
     wv1 = WordVectors(input_file=path_uk, normalized=normalized)
     wv2 = WordVectors(input_file=path_us, normalized=normalized)
+
+    if filter_pos:
+        wv1 = filter_pos_tags(wv1, filter_pos)
+        wv2 = filter_pos_tags(wv2, filter_pos)
+
     wv_uk, wv_us = intersection(wv1, wv2)
 
     # Load dictionaries of words
@@ -275,7 +321,7 @@ def read_ukus_data(normalized=False, pos_lemma=False):
     return wv_uk, wv_us, dico, y_true
 
 
-def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=False):
+def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=False, filter_pos=None):
     """
     Reads spanish word vectors + ground truth data from the LChange2022 Shared Task.
     Arguments:
@@ -293,6 +339,11 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
 
     wv1 = WordVectors(input_file=path_old, normalized=normalized)
     wv2 = WordVectors(input_file=path_modern, normalized=normalized)
+
+    if filter_pos:
+        wv1 = filter_pos_tags(wv1, filter_pos)
+        wv2 = filter_pos_tags(wv2, filter_pos)
+
     wv_old, wv_mod = intersection(wv1, wv2)
 
     df = pd.read_csv("data/spanish/stats_groupings.csv", sep="\t")
@@ -392,12 +443,14 @@ def new_main():
     parser.add_argument("--output-file", dest='output_file', default='results_param_search.csv', type=str,
                         help='Change default output file')
     parser.add_argument("--pos_lemma", action="store_true", help="Open the pos_lemma version of the embeddings.")
+    parser.add_argument("--filter_pos", default={"NOUN", "VERB"}, nargs="+", help="List of POS tags to keep in word vectors. E.g., use --filter_pos NOUN VERB to keep only nouns and verbs.")
                     
 
     args = parser.parse_args()
 
     normalized = args.normalized
     pos_lemma = args.pos_lemma
+    filter_pos = args.filter_pos
 
     if args.languages is None:
         languages = ["english", "german", "latin", "swedish"]
@@ -469,10 +522,10 @@ def new_main():
     if not args.no_semeval:
         for lang in languages:
             if not args.flip_direction:
-                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma)  
+                wv1, wv2, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)  
                 targets_1 = targets_2 = targets
             else:
-                wv2, wv1, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma)
+                wv2, wv1, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
                 targets_1 = targets_2 = targets
 
 
@@ -492,10 +545,10 @@ def new_main():
     
     if not args.no_ukus:
             if not args.flip_direction:
-                wv1, wv2, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma)
+                wv1, wv2, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
                 targets_1, targets_2 = zip(*targets)
             else:
-                wv2, wv1, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma)
+                wv2, wv1, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
                 targets_2, targets_1 = zip(*targets)
 
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
@@ -510,10 +563,10 @@ def new_main():
 
     if not args.no_spanish:
         if not args.flip_direction:
-            wv1, wv2, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma)
+            wv1, wv2, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
             targets_1 = targets_2 = targets
         else:
-            wv2, wv1, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma)
+            wv2, wv1, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
             targets_1 = targets_2 = targets
 
         results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
