@@ -240,8 +240,7 @@ def filter_pos_tags(wv, filter_pos):
     vectors = list()
 
     for w, v in zip(wv.words, wv.vectors):
-        splits = w.split("_", 1)
-        print(w)
+        splits = w.rsplit("_", 1)  # Using rsplit to split the rightmost '_'.
         if len(splits) < 2:
             continue
         word, pos = splits
