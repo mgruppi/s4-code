@@ -203,9 +203,10 @@ class WordVectors:
 
             # Use this function to process line reading in map
             def process_line(s):
-                s = s.rstrip().split(" ", 1)
+                s = s.rstrip().split(" ")
                 w = s[0]
-                v = np.array(s[1].split(" "), dtype=float)
+                # v = np.array(s[1].split(" "), dtype=float)
+                v = np.array(s[-self.dimension:])  # The last dim elements should be the vector. 
                 return w, v
 
             data = map(process_line, fin.readlines())

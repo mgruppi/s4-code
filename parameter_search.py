@@ -241,6 +241,7 @@ def filter_pos_tags(wv, filter_pos):
 
     for w, v in zip(wv.words, wv.vectors):
         splits = w.split("_", 1)
+        print(w)
         if len(splits) < 2:
             continue
         word, pos = splits
@@ -330,7 +331,7 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
                         Other options are "change_binary_gain" and "change_binary_loss".
     """
 
-    if pos_lemma:
+    if not pos_lemma:
         path_old = "wordvectors/spanish/old.vec"
         path_modern = "wordvectors/spanish/modern.vec"
     else:
