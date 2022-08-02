@@ -244,6 +244,8 @@ def filter_pos_tags(wv, filter_pos):
         if len(splits) < 2:
             continue
         word, pos = splits
+        if "attack" in w.lower():
+            print(w, word)
 
         if pos in filter_pos:
             words.append(word)
