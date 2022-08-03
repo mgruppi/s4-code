@@ -218,7 +218,7 @@ def n_experiment_generator(wv1, wv2, targets_1, targets_2, y_true, num_trials=10
                 yield res_tuple
 
 
-def filter_pos_tags(wv, filter_pos):
+def filter_pos_tags(wv, filter_pos, targets={}):
     """
     Filter POS tags from WordVectors object.
     Requires WV to have appended POS tags in words.
@@ -227,6 +227,7 @@ def filter_pos_tags(wv, filter_pos):
     Args:
         wv(WordVectors.WordVectors) : WordVectors to be modified.
         filter_pos(set or iterable) : POS tags to filter.
+        targets(iterable) : Set of target words to keep regardless of POS tag.
     
     Returns:
         wv_f(WordVectors.WordVectors) : Filtered WordVectors.
@@ -239,18 +240,18 @@ def filter_pos_tags(wv, filter_pos):
     words = list()
     vectors = list()
 
+    targets = set(targets)
+
     for w, v in zip(wv.words, wv.vectors):
         splits = w.rsplit("_", 1)  # Using rsplit to split the rightmost '_'.
         if len(splits) < 2:
             continue
         word, pos = splits
-        if "attack" in w.lower():
-            print(w, word)
 
-        if pos in filter_pos:
+        if pos in filter_pos or word in targets:
             words.append(word)
             vectors.append(v)
-    
+  
     wv_f = WordVectors(words=words, vectors=vectors)
 
     return wv_f
@@ -268,17 +269,17 @@ def read_semeval_data(lang, normalized=False, pos_lemma=False, filter_pos=None):
     wv1 = WordVectors(input_file=corpus1_path, normalized=normalized)
     wv2 = WordVectors(input_file=corpus2_path, normalized=normalized)
 
-    if filter_pos:
-        wv1 = filter_pos_tags(wv1, filter_pos)
-        wv2 = filter_pos_tags(wv2, filter_pos)
-
-    wv1, wv2 = intersection(wv1, wv2)
-
     path_task1 = "data/semeval/truth/%s.txt" % lang
     with open(path_task1) as fin:
         data = map(lambda s: s.strip().split("\t"), fin.readlines())
         targets, true_class = zip(*data)
         y_true = np.array(true_class, dtype=int)
+
+    if filter_pos:
+        wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
+        wv2 = filter_pos_tags(wv2, filter_pos, targets=targets)
+
+    wv1, wv2 = intersection(wv1, wv2)
 
     return wv1, wv2, targets, y_true
 
@@ -298,18 +299,22 @@ def read_ukus_data(normalized=False, pos_lemma=False, filter_pos=None):
     wv1 = WordVectors(input_file=path_uk, normalized=normalized)
     wv2 = WordVectors(input_file=path_us, normalized=normalized)
 
-    if filter_pos:
-        wv1 = filter_pos_tags(wv1, filter_pos)
-        wv2 = filter_pos_tags(wv2, filter_pos)
-
-    wv_uk, wv_us = intersection(wv1, wv2)
-
     # Load dictionaries of words
     with open(path_dict) as fin:
         dico_sim = list(map(lambda s: s.strip().split(" ", 1), fin.readlines()))
 
     with open(path_dict_dis) as fin:
         dico_dis = list(map(lambda s: (s.strip(), s.strip()), fin.readlines()))
+
+    # Concatenate targets into a single list
+    ta, tb = zip(*(dico_sim + dico_dis))
+    targets = set(ta + tb)
+
+    if filter_pos:
+        wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
+        wv2 = filter_pos_tags(wv2, filter_pos, targets=targets)
+
+    wv_uk, wv_us = intersection(wv1, wv2)
 
     # Filter words not in the vocabulry of either UK or US corpora
     dico_sim = [(a, b) for a, b in dico_sim if a in wv_uk.word_id and b in wv_us.word_id]
@@ -342,15 +347,15 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
     wv1 = WordVectors(input_file=path_old, normalized=normalized)
     wv2 = WordVectors(input_file=path_modern, normalized=normalized)
 
-    if filter_pos:
-        wv1 = filter_pos_tags(wv1, filter_pos)
-        wv2 = filter_pos_tags(wv2, filter_pos)
-
-    wv_old, wv_mod = intersection(wv1, wv2)
-
     df = pd.read_csv("data/spanish/stats_groupings.csv", sep="\t")
     targets = df["lemma"]
     y_true = df[truth_column]
+
+    if filter_pos:
+        wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
+        wv2 = filter_pos_tags(wv2, filter_pos, targets=targets)
+
+    wv_old, wv_mod = intersection(wv1, wv2)
 
     return wv_old, wv_mod, targets, y_true
 
@@ -398,7 +403,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
     
     exp_settings = itertools.product(r, n_pos, n_neg, choice_method, align_method, classifier)
     for _r, _np, _nn, _cm, _am, _cls in exp_settings:
-        print(_r, _np, _nn, _cm, _am, _cls)
+        print("Running", _r, _np, _nn, _cm, _am, _cls)
 
         for i in range(num_trials):
             if _am == "global":
@@ -442,7 +447,7 @@ def new_main():
     parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
     parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
     parser.add_argument("--flip-direction", dest="flip_direction", action="store_true", help="Run S4 in reverse direction")
-    parser.add_argument("--output-file", dest='output_file', default='results_param_search.csv', type=str,
+    parser.add_argument("--output-file", dest='output_file', default=None, type=str,
                         help='Change default output file')
     parser.add_argument("--pos_lemma", action="store_true", help="Open the pos_lemma version of the embeddings.")
     parser.add_argument("--filter_pos", default={"NOUN", "VERB"}, nargs="+", help="List of POS tags to keep in word vectors. E.g., use --filter_pos NOUN VERB to keep only nouns and verbs.")
@@ -458,6 +463,16 @@ def new_main():
         languages = ["english", "german", "latin", "swedish"]
     else:
         languages = args.languages
+    
+    if args.output_file is None:
+        datasets = list()
+        if not args.no_semeval:
+            datasets.append("semeval")
+        if not args.no_ukus:
+            datasets.append("ukus")
+        if not args.no_spanish:
+            datasets.append("spanish")
+        args.output_file = "results_param_search_%s.csv" % "+".join(datasets)
 
     # Make file header
     header_tuple = (
