@@ -273,7 +273,18 @@ def read_semeval_data(lang, normalized=False, pos_lemma=False, filter_pos=None):
     with open(path_task1) as fin:
         data = map(lambda s: s.strip().split("\t"), fin.readlines())
         targets, true_class = zip(*data)
-        y_true = np.array(true_class, dtype=int)
+
+        # Make sure the target words are present in wv1 and wv2
+        clean_targets, clean_true = list(), list()
+        for t, y in zip(targets, true_class):
+            if t in wv1 and t in wv2:
+                clean_targets.append(t)
+                clean_true.append(y)
+        
+        targets = clean_targets
+        y_true = np.array(clean_true, dtype=int)
+    
+    
 
     if filter_pos:
         wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
