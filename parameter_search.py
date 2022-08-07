@@ -494,7 +494,7 @@ def new_main():
         n_neg_range = np.arange(500, 5500, 500)
         print("N_neg range", n_neg_range)
 
-        r_range = np.linspace(0, 5, 10)
+        r_range = np.linspace(0, args.r_upper, args.r_steps)
         print("R-range", r_range)
 
         choice_methods = ['random', 'far', 'close']
@@ -515,7 +515,7 @@ def new_main():
         cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
         cls_thresholds = [0.25, 0.5, 0.75, 0.90]
         classifiers = list(zip(cls_names, cls_func, cls_thresholds))
-        r_range = np.linspace(0, 5, 10) 
+        r_range = np.linspace(0, args.r_upper, args.r_steps) 
         print("R-range", r_range)
     elif args.param == "n":
         choice_methods = ['random']
