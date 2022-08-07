@@ -17,7 +17,12 @@ import itertools
 
 
 def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
-    x = np.array([cosine(wv1[t1.lower()], wv2[t2.lower()]) for t1, t2 in zip(targets_1, targets_2)])
+    x = np.ones(len(targets_1))
+    for i in range(len(targets_1)):
+        t1, t2 = targets_1[i], targets_2[i]
+        if t1.lower() in wv1 and t2.lower() in wv2:
+            x[i] = cosine(wv1[t1.lower()], wv2[t2.lower()])
+    # x = np.array([cosine(wv1[t1.lower()], wv2[t2.lower()]) for t1, t2 in zip(targets_1, targets_2)])
     y_pred = x.reshape(-1, 1)
 
     y_bin = (y_pred > threshold)
@@ -273,18 +278,7 @@ def read_semeval_data(lang, normalized=False, pos_lemma=False, filter_pos=None):
     with open(path_task1) as fin:
         data = map(lambda s: s.strip().split("\t"), fin.readlines())
         targets, true_class = zip(*data)
-
-        # Make sure the target words are present in wv1 and wv2
-        clean_targets, clean_true = list(), list()
-        for t, y in zip(targets, true_class):
-            if t in wv1 and t in wv2:
-                clean_targets.append(t)
-                clean_true.append(y)
-        
-        targets = clean_targets
-        y_true = np.array(clean_true, dtype=int)
-    
-    
+        y_true = np.array(true_class, dtype=int)    
 
     if filter_pos:
         wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
