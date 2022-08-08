@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from torch import nn
 import torch.optim as optim
-import torch.nn.functional as F
 from scipy.spatial.distance import cosine, euclidean
 
 # Local modules
@@ -66,7 +65,7 @@ class S4Network(nn.Module):
             x = torch.from_numpy(x).type(torch.FloatTensor)
         logits = self(x)
         # proba = nn.Softmax(dim=1)(logits)
-        proba = F.sigmoid(logits)
+        proba = torch.sigmoid(logits)
         return proba
 
 
