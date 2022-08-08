@@ -420,7 +420,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                     rate=_r,
                                                     n_targets=_np,
                                                     n_negatives=_nn,
-                                                    cls_model='nn',
+                                                    cls_model=cls_model,
                                                     iters=100, 
                                                 )
             n_landmarks = len(landmarks)
