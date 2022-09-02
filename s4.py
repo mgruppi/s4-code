@@ -28,8 +28,8 @@ from alignment import align
 
 # Initialize random seeds
 np.random.seed(1)
-# tf.random.set_seed(1)
-tf.random.set_random_seed(1)
+tf.random.set_seed(1)
+# tf.random.set_random_seed(1)  # This is for TF1
 
 
 def cumulative_choice(array, p=None):
