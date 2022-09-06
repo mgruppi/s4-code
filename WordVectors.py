@@ -91,7 +91,11 @@ class WordVectors:
             self.words = np.array(words)
             self.vectors = np.array(vectors)
             self.counts = counts
-            self.dimension = len(vectors[0])
+            try:
+                self.dimension = len(vectors[0])
+            except IndexError as e:
+                print("Vector index exception", e)
+                self.dimension = 0
         elif zipped:
             pass
         elif input_file:

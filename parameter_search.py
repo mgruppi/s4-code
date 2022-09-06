@@ -17,22 +17,52 @@ import itertools
 
 
 def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
+    """
+    Applies the cosine classifier to the data.
+
+    Args:
+        wv1(WordVectors) : Input word vectors
+        wv2(WordVectors) : Input word vectors
+        targets_1(list[str]) : Target words in wv1
+        targets_2(list[str]) : Target words in wv2
+        y_true(np.array[int]) : True labels
+        threshold(float) : Classification threshold
+        **kwargs(dict) : Keyword arguments
+    
+    Returns:
+        accuracy(float) : Accuracy score
+        precision(float) : Precision score
+        recall(float) : Recall score
+        f1(float) : F1 score
+        tn(int) : True negatives
+        fp(int) : False positives
+        fn(int) : False negatives
+        tp(int) : True positives
+        correct(list[str]) : List of correctly predicted words
+        incorrect(list[str]) : List of incorrectly predicted words
+    """
     x = np.ones(len(targets_1))
     for i in range(len(targets_1)):
         t1, t2 = targets_1[i], targets_2[i]
         if t1.lower() in wv1 and t2.lower() in wv2:
             x[i] = cosine(wv1[t1.lower()], wv2[t2.lower()])
-    # x = np.array([cosine(wv1[t1.lower()], wv2[t2.lower()]) for t1, t2 in zip(targets_1, targets_2)])
-    y_pred = x.reshape(-1, 1)
+    y_pred = x.reshape(-1, 1)  # Prediction score
 
-    y_bin = (y_pred > threshold)
+    y_bin = (y_pred > threshold)  # Get the binary prediction
     accuracy = accuracy_score(y_true, y_bin)
     precision = precision_score(y_true, y_bin)
     recall = recall_score(y_true, y_bin)
     f1 = f1_score(y_true, y_bin)
     tn, fp, fn, tp = confusion_matrix(y_true, y_bin).ravel()
 
-    return accuracy, precision, recall, f1, tn, fp, fn, tp
+    # Get correctly and incorrectly predicted words
+
+    correct_idx = np.where(y_bin.flatten() == y_true)[0]
+    incorrect_idx = np.where(y_bin.flatten() != y_true)[0]
+    correct = [targets_1[i] for i in correct_idx]
+    incorrect = [targets_1[i] for i in incorrect_idx]
+
+    return accuracy, precision, recall, f1, tn, fp, fn, tp, correct, incorrect
 
 
 def s4_cls(wv1, wv2, targets_1, targets_2, y_true, **kwargs):
@@ -280,7 +310,7 @@ def read_semeval_data(lang, normalized=False, pos_lemma=False, filter_pos=None):
         targets, true_class = zip(*data)
         y_true = np.array(true_class, dtype=int)    
 
-    if filter_pos:
+    if filter_pos and pos_lemma:
         wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
         wv2 = filter_pos_tags(wv2, filter_pos, targets=targets)
 
@@ -315,7 +345,7 @@ def read_ukus_data(normalized=False, pos_lemma=False, filter_pos=None):
     ta, tb = zip(*(dico_sim + dico_dis))
     targets = set(ta + tb)
 
-    if filter_pos:
+    if filter_pos and pos_lemma:
         wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
         wv2 = filter_pos_tags(wv2, filter_pos, targets=targets)
 
@@ -356,7 +386,7 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
     targets = df["lemma"]
     y_true = df[truth_column]
 
-    if filter_pos:
+    if filter_pos and pos_lemma:
         wv1 = filter_pos_tags(wv1, filter_pos, targets=targets)
         wv2 = filter_pos_tags(wv2, filter_pos, targets=targets)
 
@@ -424,15 +454,15 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                     iters=100, 
                                                 )
             n_landmarks = len(landmarks)
-            header_tuple = ('r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks', 'accuracy', 'precision',
+            header_tuple = ('num_trial', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks', 'accuracy', 'precision',
                 'recall', 'f1', 'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
             if n_landmarks > 0:
                 wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
-                acc, prec, rec, f1, tn, fp, fn, tp = _cls[1](wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, threshold=_cls[2])
-                res_tuple = (_r, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
+                acc, prec, rec, f1, tn, fp, fn, tp, correct, incorrect = _cls[1](wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, threshold=_cls[2])
+                res_tuple = (i, _r, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
             else:
-                res_tuple = (_r, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
-            yield (header_tuple, res_tuple)
+                res_tuple = (i, _r, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
+            yield (header_tuple, res_tuple, correct, incorrect)
 
 
 def new_main():
@@ -445,7 +475,7 @@ def new_main():
                         help="Do not perform UKUS experiment")
     parser.add_argument("--no-spanish", dest="no_spanish", action="store_true",
                         help="Do not perform Spanish experiment")
-    parser.add_argument("--num-trials", dest="num_trials", type=int, default=20,
+    parser.add_argument("--num-trials", '--num_trials', dest="num_trials", type=int, default=10,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
@@ -470,6 +500,9 @@ def new_main():
         languages = args.languages
     
     if args.output_file is None:
+        if not os.path.exists("results/"):
+            os.makedirs("results/")
+
         datasets = list()
         if not args.no_semeval:
             datasets.append("semeval")
@@ -477,16 +510,29 @@ def new_main():
             datasets.append("ukus")
         if not args.no_spanish:
             datasets.append("spanish")
-        args.output_file = "results_param_search_%s.csv" % "+".join(datasets)
+        args.output_file = "results/results_param_search_%s" % "+".join(datasets)
+        if args.normalized:
+            args.output_file += '_normalized'
+        if args.pos_lemma:
+            args.output_file += '_pos_lemma'
+        if args.flip_direction:
+            args.output_file += '_inverse'
+        args.output_file += '.csv'
+
+        predictions_file = args.output_file.replace("results_", "predictions_")
+
 
     # Make file header
     header_tuple = (
-    'dataset', 'normalized', 'flipped', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks',
+    'dataset', 'normalized', 'flipped', 'num_trial', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks',
     'accuracy', 'precision', 'recall', 'f1', 
     'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
 
     fout = open(args.output_file, 'w')
+    fpred = open(predictions_file, "w")
+
     print(*header_tuple, sep=',', file=fout)
+    print("dataset,word,correct,r", file=fpred)
 
     if args.param == "all":  # all vs all comparison
         n_pos_range = np.arange(500, 5500, 500)
@@ -559,11 +605,17 @@ def new_main():
 
 
 
-            for h, r in results:
+            for h, r, correct, incorrect in results:
                 print(lang, r)
                 print('semeval_'+lang, normalized, args.flip_direction, *r, sep=',')
 
                 print('semeval_'+lang, normalized, args.flip_direction, *r, sep=',', file=fout)
+
+                # Write correct and incorrect words
+                for word in correct:
+                    print("semeval_"+lang, word, 1, r[1], sep=',', file=fpred)
+                for word in incorrect:
+                    print("semeval_"+lang, word, 0, r[1], sep=',', file=fpred)
     
     if not args.no_ukus:
             if not args.flip_direction:
@@ -577,11 +629,16 @@ def new_main():
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                             choice_method=choice_methods, align_method=align_methods,
                             classifier=classifiers)
-            for h, r in results:
+            for h, r, correct, incorrect in results:
                 print("ukus", r)
                 print("ukus", normalized, args.flip_direction, *r, sep=',')
+                print("ukus", normalized, args.flip_direction, *r, sep=',', file=fout)
 
-                print("ukus", normalized, args.flip_direction, *r, sep=',', file=fout)           
+                # Write correct and incorrect words
+                for word in correct:
+                    print("ukus", word, 1, r[1], sep=',', file=fpred)
+                for word in incorrect:
+                    print("ukus", word, 0, r[1], sep=',', file=fpred)           
 
     if not args.no_spanish:
         if not args.flip_direction:
@@ -595,13 +652,19 @@ def new_main():
                         r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                         choice_method=choice_methods, align_method=align_methods,
                         classifier=classifiers)
-        for h, r in results:
+        for h, r, correct, incorrect in results:
             print("spanish", r)
             print("spanish", normalized, args.flip_direction, *r, sep=",")
-
             print('spanish', normalized, args.flip_direction, *r, sep=',', file=fout)
-    fout.close()
 
+            # Write correct and incorrect words
+            for word in correct:
+                print("spanish", word, 1, r[1], sep=',', file=fpred)
+            for word in incorrect:
+                print("spanish", word, 0, r[1], sep=',', file=fpred)
+
+    fout.close()
+    fpred.close()
 
 if __name__ == "__main__":
     new_main()
