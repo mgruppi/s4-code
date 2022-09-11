@@ -67,6 +67,8 @@ def negative_samples(words, size, p=None):
 def inject_change_single(wv, w, words, v_a, alpha, replace=False,
                          max_tries=50,
                          choice_method='random',
+                         num_choices=1,
+                         random_vector=False,
                          distances=None):
     """
     Injects change to word w in wv by randomly selecting a word t in wv
@@ -88,6 +90,8 @@ def inject_change_single(wv, w, words, v_a, alpha, replace=False,
                             - 'random' uniformly chooses a random word
                             - 'close' chooses a word based on the cosine similarity distribution
                             - 'far' chooses a word based on the cosine distance distribution
+            num_choices - (int) Number of words to select and perturb towards. Will perturb towards the mean vector of the selected words.
+            random_vector - (bool) If True, will perturb towards a `random` vector instead of sampling a word.
             distances - (array-like) List of distances between the target vector wv[w] and every other word in wv (used for close and far)
     Returns:
             x       -   (np.ndarray) modified vector of w
@@ -102,28 +106,39 @@ def inject_change_single(wv, w, words, v_a, alpha, replace=False,
     if choice_method != 'random' and distances is None:
         distances = np.fromiter((cosine(v_b, v) for v in wv.vectors), dtype=float)
 
-    while c < cos_t and tries < max_tries:
-        tries += 1
-        if choice_method == 'random':
-            selected = np.random.choice(words)  # select word with new sense
-        elif choice_method == 'far':
-            p_cos = distances/(distances.sum())  # larger distances are sampled more
-            selected = np.random.choice(words, p=p_cos)
-            # selected = cumulative_choice(words, p=p_cos)
-        elif choice_method == 'close':
-            cos_sim = 1-distances  # Convert cosine distances to similarities
-            p_sim = (cos_sim + 1)/((cos_sim + 1).sum())  # Shift similarities co-domain from [-1, 1] to [0,2]
-            selected = np.random.choice(words, p=p_sim)
-        else:
-            print("S4 Error: invalid choice_method")
-            return v_b
+    if not random_vector:
+        while c < cos_t and tries < max_tries:
+            tries += 1
+
+            if choice_method == 'random':
+                selected = np.random.choice(words, size=num_choices)  # select word with new sense
+            elif choice_method == 'far':
+                p_cos = distances/(distances.sum())  # larger distances are sampled more
+                selected = np.random.choice(words, size=num_choices, p=p_cos)
+                # selected = cumulative_choice(words, p=p_cos)
+            elif choice_method == 'close':
+                cos_sim = 1-distances  # Convert cosine distances to similarities
+                p_sim = (cos_sim + 1)/((cos_sim + 1).sum())  # Shift similarities co-domain from [-1, 1] to [0,2]
+                selected = np.random.choice(words, size=num_choices, p=p_sim)
+            else:
+                print("S4 Error: invalid choice_method")
+                return v_b
+            v_target = np.mean([wv[s] for s in selected], axis=0)
+            
+            if not replace:
+                b = wv[w] + alpha*v_target
+                v_b = b
+            else:
+                v_b = v_target
+
+            c = cosine(v_a, v_b)
+    else:
+        v_target = np.random.normal(size=v_b.shape)
         if not replace:
-            b = wv[w] + alpha*wv[selected]
+            b = wv[w] + alpha*v_target
             v_b = b
         else:
-            v_b = wv[selected]
-
-        c = cosine(v_a, v_b)
+            v_b = v_target
 
     return v_b
 
@@ -334,6 +349,8 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
           landmarks=None,
           update_landmarks=True,
           inject_choice='random',
+          num_choices=1,
+          random_vector=False,
           return_model=False,
           debug=False):
     """
@@ -466,7 +483,9 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
             v = inject_change_single(wv2_original, target, wv1.words,
                                      wv1[target], rate,
                                      distances=d_matrix[wv2_original.word_id[target]],
-                                     choice_method=inject_choice)
+                                     choice_method=inject_choice,
+                                     num_choices=num_choices,
+                                     random_vector=random_vector)
 
             pos_vectors[target] = v
 

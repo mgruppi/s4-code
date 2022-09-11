@@ -17,6 +17,8 @@ df = pd.read_csv(args.input)
 
 if args.output is None:
     output = "results/"
+else:
+    output = args.output
 
 if not os.path.exists(output):
     os.makedirs(output)

@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from s4 import s4, threshold_crossvalidation
 from s4_torch import S4Network
-from scipy.spatial.distance import cosine
+from scipy.spatial.distance import cosine, euclidean
 from param_search_semeval import get_feature_cdf, vote
 from alignment import align
 import argparse
@@ -46,6 +46,55 @@ def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
         t1, t2 = targets_1[i], targets_2[i]
         if t1.lower() in wv1 and t2.lower() in wv2:
             x[i] = cosine(wv1[t1.lower()], wv2[t2.lower()])
+    y_pred = x.reshape(-1, 1)  # Prediction score
+
+    y_bin = (y_pred > threshold)  # Get the binary prediction
+    accuracy = accuracy_score(y_true, y_bin)
+    precision = precision_score(y_true, y_bin)
+    recall = recall_score(y_true, y_bin)
+    f1 = f1_score(y_true, y_bin)
+    tn, fp, fn, tp = confusion_matrix(y_true, y_bin).ravel()
+
+    # Get correctly and incorrectly predicted words
+
+    correct_idx = np.where(y_bin.flatten() == y_true)[0]
+    incorrect_idx = np.where(y_bin.flatten() != y_true)[0]
+    correct = [targets_1[i] for i in correct_idx]
+    incorrect = [targets_1[i] for i in incorrect_idx]
+
+    return accuracy, precision, recall, f1, tn, fp, fn, tp, correct, incorrect
+
+
+def euclidean_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
+    """
+    Applies the cosine classifier to the data.
+
+    Args:
+        wv1(WordVectors) : Input word vectors
+        wv2(WordVectors) : Input word vectors
+        targets_1(list[str]) : Target words in wv1
+        targets_2(list[str]) : Target words in wv2
+        y_true(np.array[int]) : True labels
+        threshold(float) : Classification threshold
+        **kwargs(dict) : Keyword arguments
+    
+    Returns:
+        accuracy(float) : Accuracy score
+        precision(float) : Precision score
+        recall(float) : Recall score
+        f1(float) : F1 score
+        tn(int) : True negatives
+        fp(int) : False positives
+        fn(int) : False negatives
+        tp(int) : True positives
+        correct(list[str]) : List of correctly predicted words
+        incorrect(list[str]) : List of incorrectly predicted words
+    """
+    x = np.ones(len(targets_1))
+    for i in range(len(targets_1)):
+        t1, t2 = targets_1[i], targets_2[i]
+        if t1.lower() in wv1 and t2.lower() in wv2:
+            x[i] = euclidean(wv1[t1.lower()], wv2[t2.lower()])
     y_pred = x.reshape(-1, 1)  # Prediction score
 
     y_bin = (y_pred > threshold)  # Get the binary prediction
@@ -481,6 +530,7 @@ def new_main():
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
     parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
     parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
+    parser.add_argument("--euclidean", action="store_true", help="Use euclidean distance instead of cosine distance.")
     parser.add_argument("--flip-direction", dest="flip_direction", action="store_true", help="Run S4 in reverse direction")
     parser.add_argument("--output-file", dest='output_file', default=None, type=str,
                         help='Change default output file')
@@ -511,6 +561,8 @@ def new_main():
         if not args.no_spanish:
             datasets.append("spanish")
         args.output_file = "results/results_param_search_%s" % "+".join(datasets)
+        if args.euclidean:
+            args.output_file += "_euclidean"
         if args.normalized:
             args.output_file += '_normalized'
         if args.pos_lemma:
@@ -558,8 +610,14 @@ def new_main():
         choice_methods = ['random']
         align_methods = ['s4a']
         cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
-        cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
-        cls_thresholds = [0.25, 0.5, 0.75, 0.90]
+        if not args.euclidean:
+            cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
+            cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
+            cls_thresholds = [0.25, 0.5, 0.75, 0.90]
+        else:
+            cls_names = ['euclidean_050', 'euclidean_100', 'euclidean_150', 'euclidean_200']
+            cls_func = [euclidean_cls, euclidean_cls, euclidean_cls, euclidean_cls]
+            cls_thresholds = [0.5, 1.0, 1.5, 2.0]
         classifiers = list(zip(cls_names, cls_func, cls_thresholds))
         r_range = np.linspace(0, args.r_upper, args.r_steps) 
         print("R-range", r_range)
@@ -580,9 +638,14 @@ def new_main():
         n_pos_range = [200]
         n_neg_range = [200]
         align_methods = ['s4a']
-        cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
-        cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
-        cls_thresholds = [0.25, 0.5, 0.75, 0.90]
+        if not args.euclidean:
+            cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
+            cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
+            cls_thresholds = [0.25, 0.5, 0.75, 0.90]
+        else:
+            cls_names = ['euclidean_050', 'euclidean_100', 'euclidean_150', 'euclidean_200']
+            cls_func = [euclidean_cls, euclidean_cls, euclidean_cls, euclidean_cls]
+            cls_thresholds = [0.5, 1.0, 1.5, 2.0]
         classifiers = list(zip(cls_names, cls_func, cls_thresholds))
         r_range = [2.5]
         choice_methods = ['random', 'far', 'close']

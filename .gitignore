@@ -4,3 +4,5 @@ wordvectors/
 /*.csv
 /*.png
 venv/
+results/
+ablations/
