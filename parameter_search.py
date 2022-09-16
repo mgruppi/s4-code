@@ -446,6 +446,7 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
 
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                     r, n_pos, n_neg, choice_method, align_method, classifier,
+                    iterations=[100],
                     num_trials=10,
                     **kwargs):
     """
@@ -465,6 +466,7 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
         choice_method:  (string or iterable) If `string`, the fixed perturbation method to apply. If `iterable`, the list of perturbations method to use.
         align_method:   (string or iterable) If `string`, the fixed alignment method to use. If `iterable`, the list of alignment methods to use
         classifier:  (tuple or iterable) If `tuple`, then `(name, func, threshold)` must be passed as the name, callable and threshold of the classifier. If `iterable`, the list of classifier names)
+        iterations: (list[int]) List of iterations to run for.
         num_trials: (int) The number of trials to run for each setting.
         **kwargs:   Keyword arguments to send to S4.
     Returns:
@@ -485,9 +487,9 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
     if not hasattr(classifier, '__iter__'):
         classifier = [classifier]
     
-    exp_settings = itertools.product(r, n_pos, n_neg, choice_method, align_method, classifier)
-    for _r, _np, _nn, _cm, _am, _cls in exp_settings:
-        print("Running", _r, _np, _nn, _cm, _am, _cls)
+    exp_settings = itertools.product(r, n_pos, n_neg, choice_method, align_method, classifier, iterations)
+    for _r, _np, _nn, _cm, _am, _cls, _itrs in exp_settings:
+        print("Running", _r, _np, _nn, _cm, _am, _cls, _itrs)
 
         for i in range(num_trials):
             if _am == "global":
@@ -500,23 +502,23 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                                                     n_targets=_np,
                                                     n_negatives=_nn,
                                                     cls_model=cls_model,
-                                                    iters=100, 
+                                                    iters=_itrs, 
                                                 )
             n_landmarks = len(landmarks)
-            header_tuple = ('num_trial', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks', 'accuracy', 'precision',
+            header_tuple = ('num_trial', 'r', 'iters', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks', 'accuracy', 'precision',
                 'recall', 'f1', 'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
             if n_landmarks > 0:
                 wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
                 acc, prec, rec, f1, tn, fp, fn, tp, correct, incorrect = _cls[1](wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, threshold=_cls[2])
-                res_tuple = (i, _r, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
+                res_tuple = (i, _r, _itrs, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
             else:
-                res_tuple = (i, _r, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
+                res_tuple = (i, _r, _itrs, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
             yield (header_tuple, res_tuple, correct, incorrect)
 
 
 def new_main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("param", type=str, choices=["r", "n", "choice_method", "all"],
+    parser.add_argument("param", type=str, choices=["r", "n", "choice_method", "iter", "all"],
                         help="Type of parameter to search. r - rate of perturbation | n - no. of samples to perturb")
     parser.add_argument("--no-semeval", dest="no_semeval", action="store_true",
                         help="Do not perform SemEval 2020 experiment")
@@ -524,12 +526,13 @@ def new_main():
                         help="Do not perform UKUS experiment")
     parser.add_argument("--no-spanish", dest="no_spanish", action="store_true",
                         help="Do not perform Spanish experiment")
-    parser.add_argument("--num-trials", '--num_trials', dest="num_trials", type=int, default=10,
+    parser.add_argument("--num-trials", '--num_trials', dest="num_trials", type=int, default=5,
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
     parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
     parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
+    parser.add_argument("--iter-steps", dest="iter_steps", default=10, type=int, help="No. of iteration steps.")
     parser.add_argument("--euclidean", action="store_true", help="Use euclidean distance instead of cosine distance.")
     parser.add_argument("--flip-direction", dest="flip_direction", action="store_true", help="Run S4 in reverse direction")
     parser.add_argument("--output-file", dest='output_file', default=None, type=str,
@@ -571,12 +574,12 @@ def new_main():
             args.output_file += '_inverse'
         args.output_file += '.csv'
 
-        predictions_file = args.output_file.replace("results_", "predictions_")
+    predictions_file = args.output_file.replace("results_", "predictions_")
 
 
     # Make file header
     header_tuple = (
-    'dataset', 'normalized', 'flipped', 'num_trial', 'r', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks',
+    'dataset', 'normalized', 'flipped', 'num_trial', 'r', 'iters', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks',
     'accuracy', 'precision', 'recall', 'f1', 
     'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
 
@@ -586,6 +589,7 @@ def new_main():
     print(*header_tuple, sep=',', file=fout)
     print("dataset,word,correct,r", file=fpred)
 
+    iters_range = [100]
     if args.param == "all":  # all vs all comparison
         n_pos_range = np.arange(500, 5500, 500)
         print("N_pos range", n_pos_range)
@@ -609,7 +613,6 @@ def new_main():
         n_neg_range = [200]
         choice_methods = ['random']
         align_methods = ['s4a']
-        cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
         if not args.euclidean:
             cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
             cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
@@ -621,6 +624,23 @@ def new_main():
         classifiers = list(zip(cls_names, cls_func, cls_thresholds))
         r_range = np.linspace(0, args.r_upper, args.r_steps) 
         print("R-range", r_range)
+    elif args.param == 'iter':
+        r_range = [0.25, 0.5, 1, 2, 3]
+        iters_range = np.linspace(50, 1000, args.iter_steps, dtype=int)
+        n_pos_range = [200]
+        n_neg_range = [200]
+        choice_methods = ['random']
+        align_methods = ['s4a']
+        if not args.euclidean:
+            cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
+            cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
+            cls_thresholds = [0.25, 0.5, 0.75, 0.90]
+        else:
+            cls_names = ['euclidean_050', 'euclidean_100', 'euclidean_150', 'euclidean_200']
+            cls_func = [euclidean_cls, euclidean_cls, euclidean_cls, euclidean_cls]
+            cls_thresholds = [0.5, 1.0, 1.5, 2.0]
+        classifiers = list(zip(cls_names, cls_func, cls_thresholds))
+        print("Iters range", iters_range)
     elif args.param == "n":
         choice_methods = ['random']
         align_methods = ['s4a']
@@ -664,6 +684,7 @@ def new_main():
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                             choice_method=choice_methods, align_method=align_methods,
+                            iterations=iters_range,
                             classifier=classifiers)
 
 
@@ -691,6 +712,7 @@ def new_main():
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                             choice_method=choice_methods, align_method=align_methods,
+                            iterations=iters_range,
                             classifier=classifiers)
             for h, r, correct, incorrect in results:
                 print("ukus", r)
@@ -714,6 +736,7 @@ def new_main():
         results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                         r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                         choice_method=choice_methods, align_method=align_methods,
+                        iterations=iters_range,
                         classifier=classifiers)
         for h, r, correct, incorrect in results:
             print("spanish", r)
