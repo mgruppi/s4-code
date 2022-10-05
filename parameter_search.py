@@ -512,6 +512,8 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                 acc, prec, rec, f1, tn, fp, fn, tp, correct, incorrect = _cls[1](wv1_, wv2_, targets_1, targets_2, y_true, landmarks=landmarks, threshold=_cls[2])
                 res_tuple = (i, _r, _itrs, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
             else:
+                correct = list()
+                incorrect = list()
                 res_tuple = (i, _r, _itrs, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
             yield (header_tuple, res_tuple, correct, incorrect)
 
