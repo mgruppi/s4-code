@@ -589,7 +589,7 @@ def new_main():
     fpred = open(predictions_file, "w")
 
     print(*header_tuple, sep=',', file=fout)
-    print("dataset,word,correct,r", file=fpred)
+    print("dataset,word,correct,r,cls", file=fpred)
 
     iters_range = [100]
     if args.param == "all":  # all vs all comparison
@@ -699,9 +699,9 @@ def new_main():
 
                 # Write correct and incorrect words
                 for word in correct:
-                    print("semeval_"+lang, word, 1, r[1], sep=',', file=fpred)
+                    print("semeval_"+lang, word, 1, r[1], r[7], sep=',', file=fpred)
                 for word in incorrect:
-                    print("semeval_"+lang, word, 0, r[1], sep=',', file=fpred)
+                    print("semeval_"+lang, word, 0, r[1], r[7], sep=',', file=fpred)
     
     if not args.no_ukus:
             if not args.flip_direction:
@@ -723,9 +723,9 @@ def new_main():
 
                 # Write correct and incorrect words
                 for word in correct:
-                    print("ukus", word, 1, r[1], sep=',', file=fpred)
+                    print("ukus", word, 1, r[1], r[7], sep=',', file=fpred)
                 for word in incorrect:
-                    print("ukus", word, 0, r[1], sep=',', file=fpred)           
+                    print("ukus", word, 0, r[1], r[7], sep=',', file=fpred)           
 
     if not args.no_spanish:
         if not args.flip_direction:
@@ -747,9 +747,9 @@ def new_main():
 
             # Write correct and incorrect words
             for word in correct:
-                print("spanish", word, 1, r[1], sep=',', file=fpred)
+                print("spanish", word, 1, r[1], r[7], sep=',', file=fpred)
             for word in incorrect:
-                print("spanish", word, 0, r[1], sep=',', file=fpred)
+                print("spanish", word, 0, r[1], r[7], sep=',', file=fpred)
 
     fout.close()
     fpred.close()
