@@ -14,6 +14,7 @@ from param_search_semeval import get_feature_cdf, vote
 from alignment import align
 import argparse
 import itertools
+from multiprocessing import Pool
 
 
 def cosine_cls(wv1, wv2, targets_1, targets_2, y_true, threshold=0.5, **kwargs):
@@ -444,6 +445,60 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
     return wv_old, wv_mod, targets, y_true
 
 
+def s4_job(wv1, wv2, i, _am, _r, _np, _nn, _cm, _cls, _itrs, targets_1, targets_2, y_true):
+    """
+    Runs S4 in a multiprocess job.
+
+    Args:
+        wv1(WordVectors): Input 1
+        wv2(WordVectors): Input 2
+        i(int) : Trial number
+        am(str) : Alignment method
+        r(float) : Parameter r (rate)
+        np(int) : No. of positive samples
+        nn(int) : No. of negative samples
+        _cm(str) : Choice method
+        _cls(list) : Classifier name and params
+        iters(int) : No. of iterations (epochs) to run in s4
+        targets_1(list[str]) : List of targets in wv1
+        targets_2(list[str]) : List of targets in wv2
+        y_true(list[int]) : List of true values for targets
+
+    Returns:
+        res_tuple(tuple) : Tuple of results
+    """
+    if _am == "global":
+        landmarks = wv1.words
+    elif _am == "s4a":
+        # cls_model = S4Network(wv1.dimension*2)  # This should not be the classifier from `_cls`, this is the internal S4 model
+        if 0 <= _np <= 1:  # If _np and _nn are not integers, multiply by vocab. size
+            _np = int(_np*len(wv1.words))
+        if 0 <= _nn <= 1:
+            _nn = int(_nn*len(wv1.words))
+        landmarks, non_landmarks, Q, =  s4(wv1, wv2,
+                                            verbose=0,
+                                            rate=_r,
+                                            n_targets=_np,
+                                            n_negatives=_nn,
+                                            cls_model='nn',
+                                            iters=_itrs, 
+                                        )
+    n_landmarks = len(landmarks)
+    header_tuple = ('num_trial', 'r', 'iters', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', 'landmarks', 'accuracy', 'precision',
+        'recall', 'f1', 'true_negatives', 'false_positives', 'false_negatives', 'true_positives')
+    if n_landmarks > 0:
+        wv1_, wv2_, Q = align(wv1, wv2, anchor_words=landmarks)
+        acc, prec, rec, f1, tn, fp, fn, tp, correct, incorrect = _cls[1](wv1_, wv2_, targets_1, targets_2, y_true, \
+                                                                         landmarks=landmarks, threshold=_cls[2])
+        res_tuple = (i, _r, _itrs, _np, _nn, _cm, _am, _cls[0], n_landmarks, acc, prec, rec, f1, tn, fp, fn, tp)
+    else:
+        correct = list()
+        incorrect = list()
+        res_tuple = (i, _r, _itrs, _np, _nn, _cm, _am, _cls[0], n_landmarks, -1, -1, -1, -1, -1, -1, -1, -1)
+    return (header_tuple, res_tuple, correct, incorrect)
+
+
+
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                     r, n_pos, n_neg, choice_method, align_method, classifier,
                     iterations=[100],
@@ -490,18 +545,28 @@ def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
     exp_settings = itertools.product(r, n_pos, n_neg, choice_method, align_method, classifier, iterations)
     for _r, _np, _nn, _cm, _am, _cls, _itrs in exp_settings:
         print("Running", _r, _np, _nn, _cm, _am, _cls, _itrs)
+        
+        # job_params = [(wv1, wv2, i, _am, _r, _np, _nn, _cm, _cls, _itrs, targets_1, targets_2, y_true) for i in range(num_trials)]
+        # with Pool(num_trials) as p:
+        #     results = p.starmap(s4_job, job_params)       
+        # for r in results:
+        #     yield r
 
         for i in range(num_trials):
             if _am == "global":
                 landmarks = wv1.words
             elif _am == "s4a":
-                cls_model = S4Network(wv1.dimension*2)  # This should not be the classifier from `_cls`, this is the internal S4 model
+                # cls_model = S4Network(wv1.dimension*2)  # This should not be the classifier from `_cls`, this is the internal S4 model
+                if 0 <= _np <= 1:  # If _np and _nn are not integers, multiply by vocab. size
+                    _np = int(_np*len(wv1.words))
+                if 0 <= _nn <= 1:
+                    _nn = int(_nn*len(wv1.words))
                 landmarks, non_landmarks, Q, =  s4(wv1, wv2,
-                                                    verbose=0,
+                                                    verbose=1,
                                                     rate=_r,
                                                     n_targets=_np,
                                                     n_negatives=_nn,
-                                                    cls_model=cls_model,
+                                                    cls_model='nn',
                                                     iters=_itrs, 
                                                 )
             n_landmarks = len(landmarks)
@@ -646,15 +711,19 @@ def new_main():
     elif args.param == "n":
         choice_methods = ['random']
         align_methods = ['s4a']
-        cls_names = ['cosine_025', 'cosine_050', 'cosine_075', 'cosine_090']
-        cls_func = [cosine_cls, cosine_cls, cosine_cls, cosine_cls]
-        cls_thresholds = [0.25, 0.5, 0.75, 0.90]
+        cls_names = ['cosine_025', 'cosine_050', 'cosine_075']
+        cls_func = [cosine_cls, cosine_cls, cosine_cls]
+        cls_thresholds = [0.25, 0.5, 0.75]
         classifiers = list(zip(cls_names, cls_func, cls_thresholds))
-        r_range [2.5]
+        r_range = [2.5]
 
-        n_pos_range = np.arange(500, 5500, 500)
+        # Grid search parameters
+        arange_min = 0.01
+        arange_max = 0.95
+        arange_step = 0.1
+        n_pos_range = np.arange(arange_min, arange_max, arange_step)
         print("N_pos range", n_pos_range)
-        n_neg_range = np.arange(500, 5500, 500)
+        n_neg_range = np.arange(arange_min, arange_max, arange_step)
         print("N_neg range", n_neg_range)
     elif args.param == "choice_method":
         n_pos_range = [200]
