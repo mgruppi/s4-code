@@ -48,10 +48,10 @@ for ds in datasets:
     
     for m in metrics:
         sns.relplot(data=df_d, x="r", y=m, kind="line", hue="cls")
-        plt.savefig(os.path.join(path_out, "%s_%s.png" % (ds, m)))
+        plt.savefig(os.path.join(path_out, "%s_%s.pdf" % (ds, m)))
         plt.close()
     
     # Plot positive/negative accuracies
     dfm = df_d[['r','cls','positive_accuracy','negative_accuracy']].melt(['r', 'cls'], var_name='group', value_name='vals')
     sns.relplot(data=dfm, x="r", y="vals", kind="line", hue="cls", style='group', ci=None)
-    plt.savefig(os.path.join(path_out, "%s_posneg.png" % ds))
+    plt.savefig(os.path.join(path_out, "%s_posneg.pdf" % ds))

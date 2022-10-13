@@ -1,6 +1,7 @@
 """
 Runs parameter search for `r` in S4
 """
+from curses import beep
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import pandas as pd
@@ -471,9 +472,9 @@ def s4_job(wv1, wv2, i, _am, _r, _np, _nn, _cm, _cls, _itrs, targets_1, targets_
         landmarks = wv1.words
     elif _am == "s4a":
         # cls_model = S4Network(wv1.dimension*2)  # This should not be the classifier from `_cls`, this is the internal S4 model
-        if 0 <= _np <= 1:  # If _np and _nn are not integers, multiply by vocab. size
+        if 0 <= _np <= 2.0:  # If _np and _nn are not integers, multiply by vocab. size
             _np = int(_np*len(wv1.words))
-        if 0 <= _nn <= 1:
+        if 0 <= _nn <= 2.0:
             _nn = int(_nn*len(wv1.words))
         landmarks, non_landmarks, Q, =  s4(wv1, wv2,
                                             verbose=0,
@@ -502,7 +503,7 @@ def s4_job(wv1, wv2, i, _am, _r, _np, _nn, _cm, _cls, _itrs, targets_1, targets_
 def run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                     r, n_pos, n_neg, choice_method, align_method, classifier,
                     iterations=[100],
-                    num_trials=10,
+                    num_trials=5,
                     **kwargs):
     """
     Performs experiments with a given setup. The number of settings is determined by which parameters are variable.
@@ -599,6 +600,7 @@ def new_main():
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
     parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
     parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
+    parser.add_argument("--use-best-cls", dest="use_best_cls", action="store_true", help="Use best classifiers (if known).")
     parser.add_argument("--iter-steps", dest="iter_steps", default=10, type=int, help="No. of iteration steps.")
     parser.add_argument("--euclidean", action="store_true", help="Use euclidean distance instead of cosine distance.")
     parser.add_argument("--flip-direction", dest="flip_direction", action="store_true", help="Run S4 in reverse direction")
@@ -643,6 +645,30 @@ def new_main():
 
     predictions_file = args.output_file.replace("results_", "predictions_")
 
+    # Best settings
+
+    best_cls = {
+        "english": {
+            "cls_names": ["cosine_050"],
+            "cls_func": [cosine_cls],
+            "cls_thresholds": [0.5]
+        },
+        "latin": {
+            "cls_names": ["cosine_025"],
+            "cls_func": [cosine_cls],
+            "cls_thresholds": [0.25]
+        },
+        "german": {
+            "cls_names": ["cosine_075"],
+            "cls_func": [cosine_cls],
+            "cls_thresholds": [0.75]
+        },
+        "swedish": {
+            "cls_names": ["cosine_075"],
+            "cls_func": [cosine_cls],
+            "cls_thresholds": [0.75]
+        }
+    }
 
     # Make file header
     header_tuple = (
@@ -718,12 +744,17 @@ def new_main():
         r_range = [2.5]
 
         # Grid search parameters
-        arange_min = 0.01
-        arange_max = 0.95
-        arange_step = 0.1
-        n_pos_range = np.arange(arange_min, arange_max, arange_step)
+        n_min = 0.01
+        n_max = 1.00
+        n_steps = 5
+        n_pos_range = np.linspace(n_min, n_max, n_steps)
+        n_neg_range = np.linspace(n_min, n_max, n_steps)
+        # arange_min = 0.01
+        # arange_max = 1
+        # arange_step = 5
+        # n_pos_range = np.arange(arange_min, arange_max, arange_step)
         print("N_pos range", n_pos_range)
-        n_neg_range = np.arange(arange_min, arange_max, arange_step)
+        # n_neg_range = np.arange(arange_min, arange_max, arange_step)
         print("N_neg range", n_neg_range)
     elif args.param == "choice_method":
         n_pos_range = [200]
@@ -750,13 +781,18 @@ def new_main():
                 wv2, wv1, targets, y_true = read_semeval_data(lang, normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
                 targets_1 = targets_2 = targets
 
+            if args.use_best_cls:
+                cls_list = list(zip(best_cls[lang]['cls_names'], best_cls[lang]['cls_func'], best_cls[lang]['cls_thresholds']))
+            else:
+                cls_list = classifiers
 
             # For SemEval we repeat `target` in targets_1 and targets_2
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                             choice_method=choice_methods, align_method=align_methods,
                             iterations=iters_range,
-                            classifier=classifiers)
+                            classifier=cls_list,
+                            num_trials=args.num_trials)
 
 
 
@@ -784,7 +820,8 @@ def new_main():
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                             choice_method=choice_methods, align_method=align_methods,
                             iterations=iters_range,
-                            classifier=classifiers)
+                            classifier=classifiers,
+                            num_trials=args.num_trials)
             for h, r, correct, incorrect in results:
                 print("ukus", r)
                 print("ukus", normalized, args.flip_direction, *r, sep=',')
@@ -808,7 +845,8 @@ def new_main():
                         r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                         choice_method=choice_methods, align_method=align_methods,
                         iterations=iters_range,
-                        classifier=classifiers)
+                        classifier=classifiers,
+                        num_trials=args.num_trials)
         for h, r, correct, incorrect in results:
             print("spanish", r)
             print("spanish", normalized, args.flip_direction, *r, sep=",")

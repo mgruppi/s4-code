@@ -6,9 +6,9 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--f_se", type=str, default="ablations/param_search_n_results_semeval.txt",
+parser.add_argument("--f_se", type=str, default="ablations_bkp/param_search_n_results_semeval_normalized.txt",
                     help="Path to semeval experiment data.")
-parser.add_argument("--f_en", type=str, default="ablations/param_search_n_results_ukus.txt",
+parser.add_argument("--f_en", type=str, default="ablations_bkp/param_search_n_results_ukus_normalized.txt",
                     help="Path to UKUS experiment data.")
 parser.add_argument("--parameter", choices=["n", "r", "choice"], default="n", help="Parameter to plot (r or n)")
 
@@ -45,11 +45,11 @@ if parameter == "r":
 
         for m in metrics:
             sns.relplot(data=df, x="r", y=m, kind="line", hue="cls_name")
-            plt.savefig(os.path.join(path_out_r, "semeval_%s_%s.png" % (lang, m)))
+            plt.savefig(os.path.join(path_out_r, "semeval_%s_%s.pdf" % (lang, m)))
 
     for m in metrics:
         sns.relplot(data=df_en, x="r", y=m, kind="line", hue="cls_name")
-        plt.savefig(os.path.join(path_out_r, "ukus_%s.png" % m))
+        plt.savefig(os.path.join(path_out_r, "ukus_%s.pdf" % m))
 
 # Parameter n plot
 
@@ -90,19 +90,19 @@ elif parameter == "n":
                 output_dir = os.path.join(path_out_n, "%s" % cls_name)
                 if not os.path.exists(output_dir):
                     os.makedirs(output_dir)
-                plt.savefig(os.path.join(output_dir, "semeval_heatmap_%s_%s.png") % (lang, m))
+                plt.savefig(os.path.join(output_dir, "semeval_heatmap_%s_%s.pdf") % (lang, m))
                 plt.close()
             # sns.relplot(data=df, x="n_pos", y=m, kind="line", hue="cls_name")
             # plt.tight_layout()
-            # plt.savefig(os.path.join(path_out_n, "semeval_n_pos_%s_%s.png") % (lang, m))
+            # plt.savefig(os.path.join(path_out_n, "semeval_n_pos_%s_%s.pdf") % (lang, m))
             # plt.close()
             # sns.relplot(data=df, x="n_neg", y=m, kind="line", hue="cls_name")
             # plt.tight_layout()
-            # plt.savefig(os.path.join(path_out_n, "semeval_n_neg_%s_%s.png") % (lang, m))
+            # plt.savefig(os.path.join(path_out_n, "semeval_n_neg_%s_%s.pdf") % (lang, m))
             # plt.close()
             # sns.relplot(data=df, x="n_diff", y=m, kind="line", hue="cls_name")
             # plt.tight_layout()
-            # plt.savefig(os.path.join(path_out_n, "semeval_n_diff_%s_%s.png" % (lang, m)))
+            # plt.savefig(os.path.join(path_out_n, "semeval_n_diff_%s_%s.pdf" % (lang, m)))
 
     unique_n_pos = sorted(df_en["n_pos"].unique())
     unique_n_neg = sorted(df_en["n_neg"].unique())[::-1]
@@ -123,7 +123,7 @@ elif parameter == "n":
         plt.xlabel("n_pos")
         plt.ylabel("n_neg")
         plt.tight_layout()
-        plt.savefig(os.path.join(path_out_n, "ukus_heatmap_%s.png") % m)
+        plt.savefig(os.path.join(path_out_n, "ukus_heatmap_%s.pdf") % m)
         plt.close()
 
 elif parameter == 'choice':
@@ -140,12 +140,12 @@ elif parameter == 'choice':
                 output_dir = os.path.join(path_out_choice, "%s" % cls_name)
                 if not os.path.exists(output_dir):
                     os.makedirs(output_dir)
-                plt.savefig(os.path.join(output_dir, "semeval_%s_%s.png" % (lang, m)))
+                plt.savefig(os.path.join(output_dir, "semeval_%s_%s.pdf" % (lang, m)))
                 plt.close()
 
     # UK-US
     for m in metrics:
         sns.boxplot(data=df, x="choice_method", y=m)
-        plt.savefig(os.path.join(path_out_choice, "ukus_%s.png" % m))
+        plt.savefig(os.path.join(path_out_choice, "ukus_%s.pdf" % m))
         plt.close()
 
