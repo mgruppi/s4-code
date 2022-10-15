@@ -598,7 +598,7 @@ def new_main():
                         help="Number of trials per r value")
     parser.add_argument("--normalized", action="store_true", help="Normalize word vectors")
     parser.add_argument("--languages", default=None, nargs="+", help="List of languages")
-    parser.add_argument("--r-upper", dest="r_upper", default=2, type=float, help="Upper bound for r")
+    parser.add_argument("--r-upper", dest="r_upper", default=4, type=float, help="Upper bound for r")
     parser.add_argument("--r-steps", dest="r_steps", default=11, type=int, help="No. of steps for r")
     parser.add_argument("--use-best-cls", dest="use_best_cls", action="store_true", help="Use best classifiers (if known).")
     parser.add_argument("--iter-steps", dest="iter_steps", default=10, type=int, help="No. of iteration steps.")
@@ -746,7 +746,7 @@ def new_main():
         # Grid search parameters
         n_min = 0.01
         n_max = 1.00
-        n_steps = 5
+        n_steps = 11
         n_pos_range = np.linspace(n_min, n_max, n_steps)
         n_neg_range = np.linspace(n_min, n_max, n_steps)
         # arange_min = 0.01

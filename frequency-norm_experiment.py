@@ -87,7 +87,7 @@ def get_distributions(counts, norms, filter=None, samples=1000):
 
 if __name__ == "__main__":
 
-    matplotlib.rcParams.update({"font.size": 12})
+    matplotlib.rcParams.update({"font.size": 14})
     sns.set_style("whitegrid")
     output_dir = "results/frequency-norm-dist"
 
@@ -182,7 +182,8 @@ if __name__ == "__main__":
         plt.xlabel("Word vector norm")
         plt.ylabel("Word frequency")
         plt.yscale("log")
-        plt.title("%s [r=%.2f]" % (d, spearmanr(ns, cts).correlation))
+        plt.title("%s [s=%.2f, r=%.2f]" % 
+                    (d, spearmanr(ns, cts).correlation, pearsonr(ns, np.log(cts))[0]))
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, d+"-norms-counts.pdf"))
         plt.close()
