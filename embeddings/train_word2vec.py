@@ -6,6 +6,29 @@ from gensim.models import Word2Vec
 from WordVectors import WordVectors
 
 
+def get_output_file_name(path):
+    """
+    Returns the output file name to avoid conflicting paths.
+    If `path` already exists, returns the smallest path available by incrementing a suffix '_n'.
+
+    Args:
+        path(str) : The file path.
+    
+    Returns:
+        p(str) : The valid path name. `None` if a valid name was not found.
+    """
+
+    if not os.path.exists(path):
+        return path
+    else:
+        fname, ext = path.rsplit('.', 1)
+        for count in range(1, 9999):  # Up to 9999 attempts
+            fname_new = "%s_%d.%s" % (fname, count, ext)
+            if not os.path.exists(fname_new):
+                return fname_new
+    return None
+
+
 def process_doc(doc, pos_tag, lemmatize):
     """
     Process a single Doc.
@@ -28,6 +51,7 @@ def process_doc(doc, pos_tag, lemmatize):
             tokens.append(tok)
         sents.append(tokens)
     return sents
+
 
 def preprocess_file(path, nlp, pos_tag=False, lemmatize=False):
     """
@@ -69,7 +93,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     nlp = spacy.load(args.spacy_model)
-    nlp.add_pipe("sentencizer")
+    # nlp.add_pipe("sentencizer")
 
     output_vec_file = os.path.basename(args.input).split(".")[0]
     if args.pos_tag:
@@ -92,6 +116,9 @@ if __name__ == "__main__":
 
     model = Word2Vec(sentences=sentences, **w2v_params)
     wv = WordVectors(words=model.wv.index_to_key, vectors=model.wv.vectors)
+
+    output_vec_file = get_output_file_name(output_vec_file)
+    print("Saving to", output_vec_file)
 
     wv.save_txt(output_vec_file)
 
