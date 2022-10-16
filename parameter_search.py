@@ -667,6 +667,16 @@ def new_main():
             "cls_names": ["cosine_075"],
             "cls_func": [cosine_cls],
             "cls_thresholds": [0.75]
+        },
+        "spanish": {
+            "cls_names": ["cosine_075"],
+            "cls_func": [cosine_cls],
+            "cls_thresholds": [0.75]
+        },
+        "ukus": {
+            "cls_names": ["cosine_025"],
+            "cls_func": [cosine_cls],
+            "cls_thresholds": [0.25]
         }
     }
 
@@ -816,11 +826,16 @@ def new_main():
                 wv2, wv1, targets, y_true = read_ukus_data(normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
                 targets_2, targets_1 = zip(*targets)
 
+            if args.use_best_cls:
+                cls_list = list(zip(best_cls[lang]['cls_names'], best_cls[lang]['cls_func'], best_cls[lang]['cls_thresholds']))
+            else:
+                cls_list = classifiers
+
             results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                             r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                             choice_method=choice_methods, align_method=align_methods,
                             iterations=iters_range,
-                            classifier=classifiers,
+                            classifier=cls_list,
                             num_trials=args.num_trials)
             for h, r, correct, incorrect in results:
                 print("ukus", r)
@@ -841,11 +856,16 @@ def new_main():
             wv2, wv1, targets, y_true = read_spanish_data(normalized, pos_lemma=pos_lemma, filter_pos=filter_pos)
             targets_1 = targets_2 = targets
 
+            if args.use_best_cls:
+                cls_list = list(zip(best_cls[lang]['cls_names'], best_cls[lang]['cls_func'], best_cls[lang]['cls_thresholds']))
+            else:
+                cls_list = classifiers
+
         results = run_experiments(wv1, wv2, targets_1, targets_2, y_true,
                         r_range, n_pos=n_pos_range, n_neg=n_neg_range, 
                         choice_method=choice_methods, align_method=align_methods,
                         iterations=iters_range,
-                        classifier=classifiers,
+                        classifier=cls_list,
                         num_trials=args.num_trials)
         for h, r, correct, incorrect in results:
             print("spanish", r)
