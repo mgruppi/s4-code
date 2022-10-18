@@ -1,4 +1,4 @@
-from WordVectors import WordVectors
+from WordVectors import WordVectors, intersection
 from alignment import align
 import os
 from scipy.spatial.distance import cosine
@@ -28,6 +28,8 @@ def run_alignment_experiments(wv_base, wv_list):
     data = list()
     header = ('k', 'word', 'distance', 'choice')
     choices = ['top', 'bottom', 'random']
+
+    wv_base, wv_list[0] = intersection(wv_base, wv_list[0])
 
     for choice in choices:
         for k in k_range:
@@ -77,17 +79,20 @@ if __name__ == "__main__":
     df = run_alignment_experiments(wv_base, wv_list)
 
     # sns.histplot(data=df, x='distance', hue='k')
+    plt.rcParams.update({'font.size': 14})
     sns.set_style("whitegrid")
-    sns.lineplot(data=df, x='k', y='distance', hue='choice', estimator='mean', errorbar='se', palette='Accent')
+    sns.lineplot(data=df, x='k', y='distance', hue='choice', estimator='mean', errorbar='se', palette='Accent', linewidth=2)
     plt.xlabel("Landmarks")
     plt.ylabel("Cosine distance")
     plt.xscale('log')
+    plt.tight_layout()
     plt.savefig(os.path.join(output_path, 'cosine_dist.pdf'))
     plt.close()
 
-    df = df[df['k'] == 1000]
+    df = df[(df['k'] == 1000) & (df['choice']=='top')]
     sns.histplot(data=df, x='distance', palette='Accent')
     plt.xlabel('Cosine distance')
+    plt.tight_layout()
     plt.savefig(os.path.join(output_path, 'cosine_histogram.pdf'))
 
     print("Done")

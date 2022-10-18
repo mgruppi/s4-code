@@ -1,7 +1,6 @@
 """
 Runs parameter search for `r` in S4
 """
-from curses import beep
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import pandas as pd
@@ -424,8 +423,8 @@ def read_spanish_data(normalized=False, truth_column="change_binary", pos_lemma=
     """
 
     if not pos_lemma:
-        path_old = "wordvectors/spanish/old.vec"
-        path_modern = "wordvectors/spanish/modern.vec"
+        path_old = "wordvectors/spanish/spanish-old.vec"
+        path_modern = "wordvectors/spanish/spanish-modern.vec"
     else:
         path_old = "wordvectors/spanish/old_pos_lemma.vec"
         path_modern = "wordvectors/spanish/modern_pos_lemma.vec"

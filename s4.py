@@ -20,6 +20,7 @@ from scipy.spatial.distance import cosine, euclidean
 import matplotlib.pyplot as plt
 import seaborn as sns
 import time
+import pandas as pd
 
 # Local modules
 from WordVectors import WordVectors, intersection
@@ -344,15 +345,20 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
           n_negatives=10,
           fast=True,
           rate=0,
+          r_decay=1,
+          rate_min=0,
           t=0.5,
           t_overlap=1,
+          l_alpha=1,
           landmarks=None,
           update_landmarks=True,
           inject_choice='random',
           num_choices=1,
           random_vector=False,
           return_model=False,
-          debug=False):
+          debug=False,
+          log_history=False
+          ):
     """
     Performs self-supervised learning of semantic change.
     Generates negative samples by sampling from landmarks.
@@ -372,13 +378,17 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         n_negatives - number of negative samples
         fast        - (deprecated) use fast semantic change simulation
         rate        - rate of semantic change injection
+        r_decay(float) - Exponential decay of the rate.
+        r_min(float) - Minimum value of rate (for decay). 
         t           - classificaiton threshold (0.5)
         t_overlap   - overlap threshold for (stop criterion)
+        l_alpha(float) - How many landmarks to choose initially. Only used if landmarks is `None`.
         landmarks   - list of words to use as landmarks (classification only)
         update_landmarks - if True, learns landmarks. Otherwise, learns classification model.
         inject_choice   - Method of sense injection {'random', 'far', 'close', 'new'}
         'return_model'- If True, returns the classification model
         debug       - toggles debugging mode on/off. Provides reports on several metrics. Slower.
+        log_history(bool) : If True, returns results across iterations to an output file. Default=False.
     Returns:
         if update_landmarks is True:
             landmarks - list of landmark words
@@ -416,7 +426,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
             wv1, wv2, Q = align(wv1, wv2)  # start form global alignment
             landmark_dists = [euclidean(u, v) for u, v in zip(wv1.vectors, wv2.vectors)]
             landmark_args = np.argsort(landmark_dists)
-            landmarks = [wv1.words[i] for i in landmark_args[:int(len(wv1.words)*0.5)]]
+            landmarks = [wv1.words[i] for i in landmark_args[:int(len(wv1.words)*l_alpha)]]
             # landmarks = np.random.choice(wv1.words, int(len(wv1)*0.5))
         landmark_set = set(landmarks)
         non_landmarks = np.array([w for w in wv1.words if w not in landmark_set])
@@ -424,7 +434,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         if landmarks is None:  # If no landmarks are given, infer candidates for positive/negative sampling
             landmark_dists = [euclidean(u, v) for u, v in zip(wv1.vectors, wv2.vectors)]
             landmark_args = np.argsort(landmark_dists)
-            landmarks = [wv1.words[i] for i in landmark_args[:int(len(wv1.words)*0.5)]]
+            landmarks = [wv1.words[i] for i in landmark_args[:int(len(wv1.words)*l_alpha)]]
         landmark_set = set(landmarks)
         non_landmarks = [w for w in wv1.words if w not in landmark_set]
 
@@ -455,13 +465,17 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
     cumulative_cos_in = list()
     cumulative_cos_out = list()
 
+    # History
+    log_header = ('iter', 'r', 'landmarks', 'p_landmarks', 'overlap', 'loss(in)', 'loss(out)')
+    log_result = list()
+
     prev_landmarks = set(landmarks)
     t_init = time.time() - t0
     
     d_matrix = pairwise_distances(wv2_original.vectors, metric='cosine', n_jobs=-1)
 
     for iter in range(iters):
-
+        r = max(rate*r_decay**iter, rate_min)  # Perform decay of perturbation rate
         t0 = time.time()
         pos_samples = list()
         pos_vectors = dict()
@@ -481,7 +495,7 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
             # Simulate semantic change in target word
             v = inject_change_single(wv2_original, target, wv1.words,
-                                     wv1[target], rate,
+                                     wv1[target], r,
                                      distances=d_matrix[wv2_original.word_id[target]],
                                      choice_method=inject_choice,
                                      num_choices=num_choices,
@@ -607,8 +621,12 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
         prev_landmarks = set(landmarks)
 
-        verbose_print("> %3d | L %4d | l(in): %.2f | l(out): %.2f | loss: %.2f | overlap %.2f | acc: %.2f" %
-                      (iter, len(landmarks), cumulative_alignment_hist[-1],
+        if log_history:
+            log_result.append((iter, r, len(landmarks), len(landmarks)/len(wv1.words), cumulative_overlap_hist[-1], cumulative_alignment_hist[-1],
+                                cumulative_out_hist[-1]))
+
+        verbose_print("> %3d | L %4d (%.2f) | r %.3f | l(in): %.2f | l(out): %.2f | loss: %.2f | overlap %.2f | acc: %.2f" %
+                      (iter, len(landmarks), len(landmarks)/len(wv1.words), r, cumulative_alignment_hist[-1],
                        cumulative_out_hist[-1], history[0], cumulative_overlap_hist[-1], history[1]),
                       end="\r")
         t_update += time.time() - t0
@@ -622,6 +640,10 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
         # Check if overlap difference is below threshold
         if np.mean(overlap_hist) > t_overlap:
             break
+
+    # Training is done
+    if log_history:
+        df_history = pd.DataFrame(log_result, columns=log_header)  
 
     # Print new line
     verbose_print()
@@ -676,6 +698,8 @@ def s4(wv1, wv2, verbose=0, plot=0, cls_model="nn",
 
     if update_landmarks:
         if not return_model:
+            if log_history:
+                return landmarks, non_landmarks, Q, df_history
             return landmarks, non_landmarks, Q
         else:
             return landmarks, non_landmarks, Q, model
