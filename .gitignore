@@ -6,3 +6,7 @@ wordvectors/
 venv/
 results/
 ablations/
+lost-and-found/
+*.log
+*.zip
+figures/

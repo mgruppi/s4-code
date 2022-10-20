@@ -12,8 +12,8 @@ if __name__ == "__main__":
 
     output_dir = 'results/r_decay'
     n_trials = 3
-    r_max = 5
-    r_min = 1
+    r_max = 1
+    r_min = 0.1
     # r_decay = 0.95
     max_iters=100
     np = 200

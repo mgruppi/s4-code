@@ -50,6 +50,8 @@ if __name__ == '__main__':
                 sns.lineplot(data=d_, x='iter', y='p_landmarks', hue='r_decay', errorbar=None,
                              linewidth=2, palette='Set2')
                 plt.tight_layout()
+                plt.xlabel("Epoch")
+                plt.ylabel("Landmarks")
                 plt.savefig(os.path.join(plot_dir, fname))
                 plt.close()
 
