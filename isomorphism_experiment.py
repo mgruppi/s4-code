@@ -23,8 +23,8 @@ def run_alignment_experiments(wv_base, wv_list):
     """
 
     # k_range = np.linspace(1, len(wv_base.words), 5, dtype=int)  # Align in 10 steps
-    # k_range = [1, 50, 100, 200, 500, 1000, len(wv_base.words)]
-    k_range = [1, 50, 100, 200, 500, 1000]
+    k_range = [1, 50, 100, 200, 500, 1000, len(wv_base.words)]
+    # k_range = [1, 50, 100, 200, 500, 1000]
     # k_range = np.arange(1, len(wv_base.words), 5)
     data = list()
     header = ('k', 'word', 'distance', 'choice')
@@ -91,9 +91,15 @@ if __name__ == "__main__":
     plt.close()
 
     # df = df[(df['k'] == 1000) & (df['choice']=='top')]
+
     df = df[df['choice'] == 'top']
+    print(df.groupby(['k'])['distance'].mean())
+    print(df.groupby(['k'])['distance'].std())
+    # d_all = df[df['k'] > 1000]
+    # df = df[df['k'] <= 1000]
     sns.kdeplot(data=df, x='distance', palette='crest', hue='k', fill=True, linewidth=0.2, alpha=0.5,
-                common_norm=False)
+                common_norm=False, hue_norm=(1, 1200))
+    # sns.kdeplot(data=d_all, x='distance', color='coral', hue='k', alpha=0.5, fill=True, linewidth=0.2, common_norm=False)
     plt.xlabel('Cosine distance')
     plt.tight_layout()
     plt.savefig(os.path.join(output_path, 'cosine_histogram.pdf'))

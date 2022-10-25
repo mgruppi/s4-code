@@ -24,17 +24,21 @@ if __name__ == "__main__":
     data = {'k': list(), 'overlap': list(), 'dataset': list()}
 
     chosen_datasets = {
-        'bnc-coca': 'UKUS English',
-        'english-corpus1-english-corpus2': "English(SE2020)",
-        'german-corpus1-german-corpus2': 'German',
-        'latin-corpus1-latin-corpus2': 'Latin',
-        'swedish-corpus1-swedish-corpus2': 'Swedish',
-        'spanish-old-spanish-modern': 'Spanish',
-        'wacad1990-wfic1990': 'Academic-Fiction',
-        'wacad2000-wspok2000': 'Academic-Spoken',
-        'wacad2012-wnews2012': 'Academic-News',
-        'wacad2012-wfic2012': 'Academic-Fiction',
+        # 'bnc-coca': 'UKUS English',
+        # 'english-corpus1-english-corpus2': "English(SE2020)",
+        # 'german-corpus1-german-corpus2': 'German',
+        # 'latin-corpus1-latin-corpus2': 'Latin',
+        # 'swedish-corpus1-swedish-corpus2': 'Swedish',
+        # 'spanish-old-spanish-modern': 'Spanish',
+        # 'wacad1990-wfic1990': 'Academic-Fiction',
+        # 'wacad2000-wspok2000': 'Academic-Spoken',
+        # 'wacad2012-wnews2012': 'Academic-News',
+        # 'wacad2012-wfic2012': 'Academic-Fiction',
         # 'cs.AI-physics.class-ph': 'Ai-Physics (ArXiV)'
+        'wacad1990-wacad2012': 'Academic 1990-2012',
+        'wfic1990-wfic2012': 'Fiction 1990-2012',
+        'wmag1990-wmag2012': 'Magazines 1990-2012',
+        'wnews1990-wnews2012': 'News 1990-2012'
     }
 
     cmap = matplotlib.cm.get_cmap('Set2')
@@ -90,10 +94,31 @@ if __name__ == "__main__":
             'a': 'results/word_counts/coca/w_acad_2012.txt',
             'b': 'results/word_counts/coca/w_fic_2012.txt',
             'color': colors[3]
-        }
+        },
+        'wacad1990-wacad2012': {
+            'a': 'results/word_counts/coca/w_acad_1990.txt',
+            'b': 'results/word_counts/coca/w_acad_2012.txt',
+            'color': colors[0]
+        },
+        'wfic1990-wfic2012': {
+            'a': 'results/word_counts/coca/w_fic_1990.txt',
+            'b': 'results/word_counts/coca/w_fic_2012.txt',
+            'color': colors[1]
+        },
+        'wmag1990-wmag2012': {
+            'a': 'results/word_counts/coca/w_mag_1990.txt',
+            'b': 'results/word_counts/coca/w_mag_2012.txt',
+            'color': colors[2]
+        },
+        'wnews1990-wnews2012': {
+            'a': 'results/word_counts/coca/w_news_1990.txt',
+            'b': 'results/word_counts/coca/w_news_2012.txt',
+            'color': colors[4]
+        },
     }
 
-    hue_order = ['English(SE2020)', 'German', 'Latin', 'Swedish', 'UKUS English', 'Spanish']
+    # hue_order = ['English(SE2020)', 'German', 'Latin', 'Swedish', 'UKUS English', 'Spanish']
+    hue_order = None
     sns.set_style("whitegrid")
     plt.rcParams.update({'font.size': 14})
 

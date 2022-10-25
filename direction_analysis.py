@@ -31,7 +31,7 @@ def load_experiment_results(path):
     return df, source_a, source_b
 
 
-def get_shift_rankings(df, k_lower=0.01, k_upper=1, k_step=51):
+def get_shift_rankings(df, k_lower=0.01, k_upper=1, k_step=51, print_rank_shift=False):
     """
     Returns the list of words and distances for each direction in input DataFrame `df`.
     Tables will be printed (in LaTeX format) for each dataset.
@@ -41,6 +41,7 @@ def get_shift_rankings(df, k_lower=0.01, k_upper=1, k_step=51):
         k_lower(float) : Lower bound for list depth in [0,1].
         k_upper(float) : Upper bound for list depth in [0,1].
         k_step(int) : Number of steps for k.
+        print_rank_shift(bool) : If True, prints rank shift rather than pairwise rankings.
 
     Returns:
         x_k(list[float]) : List of list depth (fractions of common vocab.)
@@ -65,30 +66,67 @@ def get_shift_rankings(df, k_lower=0.01, k_upper=1, k_step=51):
     for d in directions:
         df_ = df[df['direction'] == d]
         g = df_.groupby(['word'])['distance'].mean().reset_index()
-        df_sorted = g.sort_values('distance', ascending=False)
+
+        # if not print_rank_shift:
+        #     df_sorted = g.sort_values('distance', ascending=False)  # Distance order
+        # else:
+        df_sorted = g.sort_values('word', ascending=True)  # Alphabetic order
         words = list(df_sorted['word'])
         distances = list(df_sorted['distance'])
         r_words.append(words)
         r_distances.append(distances)
 
+    # Computes rank differences between directions
+    a_rank = 1 + len(r_distances[0]) - stats.rankdata(r_distances[0], method='ordinal')  # rank high to low
+    b_rank = 1 + len(r_distances[1]) - stats.rankdata(r_distances[1], method='ordinal')  # rank high to low
+    rank_diff = a_rank - b_rank    
+    rank_alpha = 0.01  # Alpha factor to apply to ranking priority
+    rank_shift = np.fabs(rank_diff)/(np.exp(rank_alpha*a_rank) * np.exp(rank_alpha*b_rank))
+    rank_shift_ord = np.argsort(rank_shift)[::-1]
+
+
+    # Ranked order of word indices
+    a_order = np.argsort(a_rank)
+    b_order = np.argsort(b_rank)
     print("---"*10)
     n=15
+    xsect = set.intersection(set(r_words[0][i] for i in a_order[:n]), set(r_words[1][i] for i in b_order[:n]))
     # Creates LaTeX table strings
-    for i in range(n):
-        xsect = set.intersection(set(r_words[0][:n]), set(r_words[1][:n]))
-        a = r_words[0][i]
-        b = r_words[1][i]
-        if r_words[0][i] == r_words[1][i]:
-            a = "\\textbf{%s}" % a
-            b = "\\textbf{%s}" % b
-        else:
-            if a not in xsect:
-                a = "\\textit{%s}" % a
-            if b not in xsect:
-                b = "\\textit{%s}" % b
+    if not print_rank_shift:
+        for i in range(n):
+            a = r_words[0][a_order[i]]
+            b = r_words[1][b_order[i]]
+            if a == b:
+                a = "\\cellcolor{matchColor}\\textbf{%s}" % a
+                b = "\\cellcolor{matchColor}\\textbf{%s}" % b
+            else:
+                if a not in xsect:
+                    a = "\\cellcolor{uniqueColor}\\textit{%s}" % a
+                if b not in xsect:
+                    b = "\\cellcolor{uniqueColor}\\textit{%s}" % b
+                
+            print("%s (%d-%d) & %s (%d-%d) \\\\" % (a, a_rank[a_order[i]], b_rank[a_order[i]], b, a_rank[b_order[i]], b_rank[b_order[i]]))
+    else:
+        for i in range(n):
+            w_idx = rank_shift_ord[i]
+
+            print("%s %d (%d-%d)" % (r_words[0][w_idx], rank_shift[w_idx], a_rank[w_idx], b_rank[w_idx]))
+
+        # Use order of shift first
+        # a_order = np.argsort(a_rank)
+        # b_order = np.argsort(b_rank)
+        # for i in range(n):
+            # Get words with largest rank shift
+            # w_idx = a_order[i]
+            # w = r_words[0][w_idx]
+            # w_rank_a = a_rank[w_idx]
+            # w_rank_b = b_rank[w_idx]
+            # print("%s %d (%d/%d)" % (w, w_rank_a-w_rank_b, w_rank_a, w_rank_b))
+            # w_idx = rank_shift_ord[i]
+            # w = r_words[0][w_idx]
+            # print("%s (%d/%d)" % (w, a_rank[w_idx], b_rank[w_idx]))     
             
-        print("%s & %s \\\\" % (a, b))
-    
+                
     # print("\n Kendall's Tau")
     # print(" - ", stats.kendalltau(r_words[0], r_words[1]))
     # print(" - (20)", stats.kendalltau(r_words[0][:20], r_words[1][:20]))
@@ -137,12 +175,14 @@ if __name__ == "__main__":
         ds = '%s-%s' % (source_a, source_b)      
         print("---"*10)
         print(ds)
-        x_k, x_kn, x_o = get_shift_rankings(df)
+        x_k, x_kn, x_o = get_shift_rankings(df, print_rank_shift=False)
         
         if ds in chosen_datasets:
             data['k'].extend(x_k)
             data['overlap'].extend(x_o)
             data['dataset'].extend([chosen_datasets[ds]] * len(x_k))
+        
+        input()
     
     plt.rcParams.update({'font.size': 14})
     sns.set_style("whitegrid")
