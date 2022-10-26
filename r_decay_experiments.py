@@ -12,14 +12,14 @@ if __name__ == "__main__":
 
     output_dir = 'results/r_decay'
     n_trials = 3
-    r_max = 1
-    r_min = 0.1
+    r_max = 5
+    r_min = 1
     # r_decay = 0.95
     max_iters=100
     np = 200
     nn = 200
 
-    r_decay_list = [0.99, 0.9, 0.5, 0.25]
+    r_decay_list = [1, 0.99, 0.5, 0.25]
 
     result_header = ('dataset', 'iter', 'r_max', 'r_min', 'r_decay', 'iters', 'n_pos', 'n_neg', 'choice_method', 'alignment', 'cls', \
                  'landmarks', 'p_landmarks', 'accuracy', 'precision', 'recall', 'f1', 'true_negatives', 'false_positives', \
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(output_dir, 'scores'))
 
     normalized=True
-    languages = ['english']  # , 'german', 'latin', 'swedish']
+    languages = ['english', 'german', 'latin', 'swedish']
 
     best_cls = {
         "english": {
