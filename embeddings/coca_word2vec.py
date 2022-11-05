@@ -28,23 +28,30 @@ def word2vec_job(corpus_path, w2v_params, output_dir):
     """
     print("* Starting", corpus_path)
 
-    with open(corpus_path) as fin:
-        lines = fin.readlines()
-    sentences = tokenize(lines)
+    try:
+        with open(corpus_path) as fin:
+            lines = fin.readlines()
+        sentences = tokenize(lines)
 
-    model = Word2Vec(sentences=sentences, **w2v_params)
-    wv = WordVectors(words=model.wv.index_to_key, vectors=model.wv.vectors)
+        model = Word2Vec(sentences=sentences, **w2v_params)
+        wv = WordVectors(words=model.wv.index_to_key, vectors=model.wv.vectors)
 
-    output_basename = os.path.basename(corpus_path).replace(".txt", ".vec")
-    wv.save_txt(os.path.join(output_dir, output_basename))
-    print("    + Done", corpus_path)
+        output_basename = os.path.basename(corpus_path).replace(".txt", ".vec")
+        wv.save_txt(os.path.join(output_dir, output_basename))
+        print("    + Done", corpus_path)
+    except UnicodeDecodeError as e:
+        print("Decode error", e, corpus_path)
 
     return True
 
 
 if __name__ == "__main__":
-    input_path = "/data/corpus/coca/coca/text/"
-    output_dir = "wordvectors/coca/"
+    # input_path = "/data/corpus/coca/coca/text/"
+    # output_dir = "wordvectors/coca/"
+
+    # # COHA paths
+    input_path = '/data/corpus/coha/coha-wlp/'
+    output_dir = 'wordvectors/coha/'
 
     w2v_params = {
         "vector_size": 300,
@@ -60,12 +67,9 @@ if __name__ == "__main__":
 
     job_params = [(os.path.join(input_path, f), w2v_params, output_dir) for f in files]
 
-    print(job_params)
-
+    ### Multiprocessing
     with Pool() as p:
         results = p.starmap(word2vec_job, job_params)
 
     print("- All done")
-
-    # Coca files are pre-tokenized, so we just need to split on spaces
 
