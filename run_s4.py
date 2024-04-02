@@ -6,7 +6,7 @@ from s4 import s4
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgmentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("path_src", help="Path to source vector files")
     parser.add_argument("path_tgt", help="Path to target vector files")
 
