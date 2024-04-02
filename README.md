@@ -4,6 +4,8 @@ This code repository contains the code for the experiments seen in the paper  `F
 
 ## Requirements
 
+Python version: Python 3.8. __Some of the dependencies are not compatible with newer Python versions__.
+
 This repository contains mainly Python3 routines and dependencies listed in `requirements.txt`. To install the dependencies using pip/venv, run:
 
 ```
