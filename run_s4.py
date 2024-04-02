@@ -3,6 +3,16 @@ from WordVectors import WordVectors, intersection
 from alignment import align
 from scipy.spatial.distance import cosine
 from s4 import s4
+from gensim.models import Word2Vec
+
+
+def load_word2vec(path, normalize):
+    model = Word2Vec.load(path)
+    words = list(model.wv.index_to_key)
+    vectors = model.wv.vectors
+
+    wv = WordVectors(words=words, vectors=vectors, normalized=normalize)
+    return wv
 
 
 if __name__ == "__main__":
@@ -14,8 +24,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    wv1 = WordVectors(input_file=args.path_src, normalized=args.normalize)
-    wv2 = WordVectors(input_file=args.path_tgt, normalized=args.normalize)
+    wv1 = load_word2vec(args.path_src, args.normalize)
+    wv2 = load_word2vec(args.path_tgt, args.normalize)
+    # wv1 = WordVectors(input_file=args.path_src, normalized=args.normalize)
+    # wv2 = WordVectors(input_file=args.path_tgt, normalized=args.normalize)
 
     wv1, wv2 = intersection(wv1, wv2)
 
