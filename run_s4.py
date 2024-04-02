@@ -1,7 +1,7 @@
 import argparse
 from WordVectors import WordVectors, intersection
 from alignment import align
-from scipy.spatial.distaince import cosine
+from scipy.spatial.distance import cosine
 from s4 import s4
 
 
