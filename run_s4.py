@@ -19,6 +19,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("path_src", help="Path to source vector files")
     parser.add_argument("path_tgt", help="Path to target vector files")
+    parser.add_argument("--iters", default=300, help="Num iterations")
+    parser.add_argument("--n_targets", default=100, help="Num of targets to sample")
+    parser.add_argument("--n_negatives", default=100, help="Number of negative samples")
+    parser.add_argument("--rate", default=1, help="The rate of change")
 
     parser.add_argument("--normalize", action="store_true", help="Normalize vectors")
 
@@ -33,13 +37,13 @@ if __name__ == "__main__":
 
     landmarks, non_landmarks, Q = s4(wv1, wv2,
                                         cls_model="nn",
-                                        n_targets=100,
-                                        n_negatives=100,
-                                        rate=1,
+                                        n_targets=args.n_targets,
+                                        n_negatives=args.n_negatives,
+                                        rate=args.rate,
                                         t=0.5,
-                                        iters=100,
+                                        iters=args.iters,
                                         verbose=1,
-                                        plot=1)
+                                        plot=0)
     wv1, wv2, Q = align(wv1, wv2, anchor_words=landmarks)
     d_l = [cosine(wv1[w], wv2[w]) for w in landmarks]
     d_n = [cosine(wv1[w], wv2[w]) for w in non_landmarks]
