@@ -4,6 +4,7 @@ from alignment import align
 from scipy.spatial.distance import cosine
 from s4 import s4
 from gensim.models import Word2Vec
+from pathlib import Path
 
 
 def load_word2vec(path, normalize):
@@ -48,7 +49,11 @@ if __name__ == "__main__":
     d_l = [cosine(wv1[w], wv2[w]) for w in landmarks]
     d_n = [cosine(wv1[w], wv2[w]) for w in non_landmarks]
 
-    with open("shift_distances.csv", "w") as fout:
+    file_src = Path(args.path_src)
+    file_tgt = Path(args.path_tgt)
+
+
+    with open(f"shift_distances_{file_src.name}_{file_tgt.name}.csv", "w") as fout:
         for w in wv1.words:
             d = cosine(wv1[w], wv2[w])
             fout.write(f"{w},{d}\n")
