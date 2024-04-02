@@ -45,6 +45,6 @@ if __name__ == "__main__":
     d_n = [cosine(wv1[w], wv2[w]) for w in non_landmarks]
 
     with open("shift_distances.csv", "w") as fout:
-        for w in wv1:
+        for w in wv1.words:
             d = cosine(wv1[w], wv2[w])
             fout.write(f"{w},{d}\n")
